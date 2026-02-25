@@ -9,6 +9,10 @@ body {
     margin: 0;
 }
 
+p1 {
+  color: #333;
+}
+
 body > ul {
   list-style: none;
   padding: 0;
