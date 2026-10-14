@@ -14,6 +14,10 @@
   --k2: #23866a;
   --k3: #7b4fb0;
   --k4: #8a7a1c;
+  --k5: #b0522f;
+  --k6: #2b8a99;
+  --k7: #a33a6e;
+  --k8: #5b6b1f;
   --level: #d27a1f;
   --opt: #c2364a;
   --face: #8592a5;
@@ -25,40 +29,66 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #0f141b; --panel: #161d27; --ink: #e6ebf2; --muted: #98a3b3; --rule: #2a3442;
-    --k1: #6ea9e6; --k2: #5cc4a2; --k3: #b48ce8; --k4: #cdbb52;
+    --k1: #6ea9e6; --k2: #5cc4a2; --k3: #b48ce8; --k4: #cdbb52; --k5: #e8875f; --k6: #5fc3d2; --k7: #e07aab; --k8: #a8bd5a;
     --level: #f0a24e; --opt: #f26b7e; --face: #7d8899; --path: #e47cc6;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0f141b; --panel: #161d27; --ink: #e6ebf2; --muted: #98a3b3; --rule: #2a3442;
-  --k1: #6ea9e6; --k2: #5cc4a2; --k3: #b48ce8; --k4: #cdbb52;
+  --k1: #6ea9e6; --k2: #5cc4a2; --k3: #b48ce8; --k4: #cdbb52; --k5: #e8875f; --k6: #5fc3d2; --k7: #e07aab; --k8: #a8bd5a;
   --level: #f0a24e; --opt: #f26b7e; --face: #7d8899; --path: #e47cc6;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
 body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5; }
+html, body { height: 100%; }
 .wrap {
-  max-width: 1180px; margin: 0 auto;
-  padding-block: 24px 40px;
+  margin: 0; height: 100%;
+  padding-block: 20px;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
-  display: grid; gap: 20px;
+  display: grid; gap: 16px; grid-template-rows: auto minmax(0, 1fr);
 }
 h1 { font-family: var(--font-display); font-weight: 600; font-size: clamp(24px, 3.4vw, 32px); line-height: 1.15; margin: 0; }
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.seg { display: inline-grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; background: var(--panel); }
+.seg button { font: 500 14px var(--font-mono); padding: 6px 18px; border: 0; background: transparent; color: var(--muted); cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--panel); }
+.seg button:focus-visible { outline: 2px solid var(--level); outline-offset: -2px; }
 
-.bench { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(320px, 1fr); gap: 20px; align-items: start; }
-@media (max-width: 880px) { .bench { grid-template-columns: minmax(0, 1fr); } }
+/* Desktop: the page fills the window. Canvas on the left takes all spare space;
+   the right column (inputs + tableaus) scrolls on its own. Phone: normal page flow — inputs, view, legend, tableaus. */
+.bench {
+  display: grid; column-gap: 24px; row-gap: 8px; min-height: 0;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 440px);
+  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-areas: "viz side" "legend side";
+}
+.side { grid-area: side; min-height: 0; overflow: hidden; display: grid; gap: 20px; grid-template-rows: auto minmax(0, 1fr); }
 
-.stage { background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; aspect-ratio: 1 / 0.9; max-width: 100%; overflow: hidden; }
-canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+
+.bench > .legend { grid-area: legend; margin: 0; }
+.viz { grid-area: viz; margin: 0; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.stage { position: relative; flex: 1 1 auto; min-height: 260px; background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; max-width: 100%; overflow: hidden; }
+@media (max-width: 880px) {
+  html, body, .wrap { height: auto; }
+  .wrap { grid-template-rows: none; }
+  .bench { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; row-gap: 20px; grid-template-areas: "inputs" "viz" "legend" "simplex"; }
+  .side { display: contents; }
+  .bench #simgrid { overflow: visible; }
+  .inputs { grid-area: inputs; }
+  .simplex { grid-area: simplex; }
+  .stage { flex: none; min-height: 0; aspect-ratio: 1 / 0.9; }
+}
+canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
 canvas:active { cursor: grabbing; }
 .legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 13px; color: var(--muted); margin-top: 8px; }
 .legend span { display: inline-flex; align-items: center; gap: 6px; }
 .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
 
 aside { display: grid; gap: 18px; min-width: 0; }
-.label { font-size: 12px; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+.label { font-size: 12px; letter-spacing: .02em; color: var(--muted); font-weight: 500; }
 
 .editor { background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 14px; display: grid; gap: 10px; font-family: var(--font-mono); font-size: 14px; }
 .row { display: flex; align-items: center; gap: 5px; flex-wrap: nowrap; min-width: 0; }
@@ -87,9 +117,10 @@ input[type="range"] { width: 100%; accent-color: var(--level); }
 .result { font-size: 15px; }
 .result b { color: var(--opt); font-weight: 500; }
 
-.simplex { display: grid; gap: 12px; border-top: 1px solid var(--rule); padding-top: 20px; }
+.simplex { display: grid; gap: 12px; border-top: 1px solid var(--rule); padding-top: 18px; min-width: 0; min-height: 0; grid-template-rows: auto auto minmax(0, 1fr); align-content: start; }
+#simgrid { min-height: 0; overflow-y: auto; padding-right: 6px; padding-bottom: 4px; }
 .simhead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 20px; }
-h2 { font-family: var(--font-display); font-weight: 600; font-size: 21px; margin: 0; }
+h2 { font-family: var(--font-display); font-weight: 600; font-size: 19px; margin: 0; }
 .rule { font-size: 13.5px; color: var(--muted); margin: 0; max-width: 75ch; }
 .ctrls { display: flex; align-items: center; gap: 8px; }
 .btn { font: inherit; font-size: 14px; font-weight: 500; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--rule); background: var(--panel); color: var(--ink); cursor: pointer; }
@@ -113,62 +144,73 @@ tr.lv td { background: color-mix(in srgb, var(--path) 9%, transparent); }
 td.piv { background: color-mix(in srgb, var(--path) 28%, transparent); color: var(--ink); font-weight: 600; }
 tr.pick td { color: var(--path); font-weight: 500; }
 .simerr { color: var(--muted); }
-.pair { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; }
+.pair { display: flex; flex-direction: column; align-items: stretch; gap: 8px; min-width: 0; }
 .tb { display: grid; gap: 6px; min-width: 0; max-width: 100%; }
-.tb .tablewrap { width: fit-content; max-width: 100%; }
-.pair .arrow { font-size: 22px; color: var(--path); padding-top: 18px; }
-@media (max-width: 880px) { .pair .arrow { transform: rotate(90deg); padding-top: 0; } }
+.tb .tablewrap { max-width: 100%; }
+.tb .label { text-transform: uppercase; letter-spacing: .07em; }
+.tb table { table-layout: fixed; min-width: 340px; }
+.pair .arrow { font-size: 20px; line-height: 1; color: var(--path); text-align: center; }
 </style>
 
 <div class="wrap">
-  <h1>LP visualizer</h1>
+  <header class="top">
+    <h1>LP visualizer</h1>
+    <div class="seg" role="group" aria-label="Number of variables">
+      <button id="d2" aria-pressed="false">2D</button>
+      <button id="d3" aria-pressed="true">3D</button>
+    </div>
+  </header>
   <div class="bench">
-    <figure style="margin:0;min-width:0">
+    <figure class="viz">
       <div class="stage"><canvas id="cv" aria-label="Rotatable 3D view of the feasible region"></canvas></div>
-      <div class="legend">
-        <span><i class="dot" style="background:var(--ink)"></i>Corner of the feasible region</span>
-        <span><i class="dot" style="border:1.5px solid var(--muted)"></i>Plane meets an axis outside the region</span>
-        <span><i class="dot" style="background:var(--level)"></i>Level set f = c</span>
-        <span><i class="dot" style="background:var(--opt)"></i>Maximum</span>
-        <span><i class="dot" style="background:var(--path)"></i>Simplex path</span>
-      </div>
     </figure>
+      <div class="legend">
+        <span><i class="dot" style="background:var(--ink)"></i>corner of the feasible region</span>
+        <span><i class="dot" style="background:var(--level)"></i>level set f = c</span>
+        <span><i class="dot" style="background:var(--opt)"></i>maximum</span>
+        <span><i class="dot" style="background:var(--path)"></i>simplex path</span>
+      </div>
 
-    <aside>
+    <div class="side">
+    <aside class="inputs">
       <div class="editor" id="editor" aria-label="Linear program editor"></div>
       <div class="slider">
-        <div class="readout"><label for="c" class="label">Level value c</label><b id="cval">6.00</b></div>
+        <div class="readout"><label for="c" class="label">level value c</label><b id="cval">6.00</b></div>
         <input type="range" id="c" min="0" max="22" step="0.05" value="6">
       </div>
       <div class="result" id="result"></div>
     </aside>
-  </div>
 
-  <section class="simplex" aria-label="Simplex method">
-    <div class="simhead">
-      <h2>Simplex method, largest-coefficient rule</h2>
-      <div class="ctrls">
-        <button class="btn" id="prev" aria-label="Previous step">◀ Prev</button>
-        <span class="stepno" id="stepno">Step 1 of 1</span>
-        <button class="btn" id="next" aria-label="Next step">Next ▶</button>
-        <button class="btn" id="play">Play</button>
-      </div>
+    <section class="simplex" aria-label="Simplex method">
+      <h2>simplex method, largest-coefficient</h2>
+      <p class="simtext" id="simtext"></p>
+      <div id="simgrid" class="pair"></div>
+    </section>
     </div>
-    <p class="simtext" id="simtext"></p>
-    <div id="simgrid" class="pair">
-      <div class="tb"><div class="label" id="lab-from"></div><div class="tablewrap"><table id="tab"></table></div></div>
-      <div class="arrow" id="pair-arrow" aria-hidden="true">→</div>
-      <div class="tb" id="to-block"><div class="label" id="lab-to"></div><div class="tablewrap"><table id="tab2"></table></div></div>
-    </div>
-  </section>
+  </div>
 </div>
 
 <script>
 (function () {
   const EXAMPLE = { c: ["3","2","4"], A: [["0","1","2"], ["1","0","2"]], b: ["4","2"] };
-  const MAXC = 4, KEY = "lp-explorer-v3";
-  let lp = JSON.parse(JSON.stringify(EXAMPLE));
-  try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.c && s.A && s.b) lp = s; } catch (e) {}
+  const MAXC = 8, KEY = "lp-explorer-v4";
+  const clone = o => JSON.parse(JSON.stringify(o));
+  const dropZ = l => ({ c: l.c.slice(0, 2), A: l.A.map(r => r.slice(0, 2)), b: l.b.slice() });
+  const okLP = (s, n) => s && Array.isArray(s.c) && s.c.length === n && Array.isArray(s.A) && s.A.length && s.A.every(r => r.length === n) && Array.isArray(s.b) && s.b.length === s.A.length;
+  const store = { dim: 3, lp3: clone(EXAMPLE), lp2: dropZ(EXAMPLE) };
+  try {
+    const s = JSON.parse(localStorage.getItem(KEY));
+    if (s) {
+      if (okLP(s.lp3, 3)) store.lp3 = s.lp3;
+      if (okLP(s.lp2, 2)) store.lp2 = s.lp2;
+      if (s.dim === 2) store.dim = 2;
+    } else {
+      const old = JSON.parse(localStorage.getItem("lp-explorer-v3"));
+      if (okLP(old, 3)) store.lp3 = old;
+    }
+  } catch (e) {}
+  let dim = store.dim;
+  let lp = dim === 3 ? store.lp3 : store.lp2;
 
   // ---------- math helpers ----------
   const dot = (a, b) => a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
@@ -287,25 +329,93 @@ tr.pick td { color: var(--path); font-weight: 500; }
              flo: Math.min(...fAll), fhi: Math.max(...fAll) };
   }
 
-  // ---------- simplex (steepest edge) ----------
-  const SUB = ["₁","₂","₃","₄"];
+  // ---------- 2D geometry ----------
+  const len2 = a => Math.hypot(a[0], a[1]);
+  const close2 = (a, b) => Math.hypot(a[0]-b[0], a[1]-b[1]) < 1e-7 * (1 + len2(a));
+  function solve2(a, b) {
+    const det = a.n[0]*b.n[1] - a.n[1]*b.n[0];
+    if (Math.abs(det) < 1e-10 * len2(a.n) * len2(b.n)) return null;
+    return [(a.b*b.n[1] - a.n[1]*b.b) / det, (a.n[0]*b.b - a.b*b.n[0]) / det];
+  }
+  function enumerate2(cons, clip) {
+    const lines = [];
+    cons.forEach(k => { if (len2(k.n) > 1e-12) lines.push({ n: k.n, b: k.b, kind: k.kind }); });
+    lines.push({ n: [-1,0], b: 0, kind: "face" }, { n: [0,-1], b: 0, kind: "face" },
+               { n: [1,0], b: clip[0], kind: "clip" }, { n: [0,1], b: clip[1], kind: "clip" });
+    const tol = (l, p) => 1e-7 * (1 + Math.abs(l.b) + len2(l.n) * len2(p));
+    const feas = p => cons.every(k => k.n[0]*p[0] + k.n[1]*p[1] <= k.b + tol(k, p)) &&
+      p.every((v, i) => v >= -1e-7 * (1 + clip[i]) && v <= clip[i] + 1e-7 * (1 + clip[i]));
+    const verts = [];
+    for (let i = 0; i < lines.length; i++) for (let j = i+1; j < lines.length; j++) {
+      let p = solve2(lines[i], lines[j]);
+      if (!p || !feas(p)) continue;
+      p = p.map(v => Math.abs(v) < 1e-10 ? 0 : v);
+      if (!verts.some(v => close2(v.p, p))) verts.push({ p });
+    }
+    verts.forEach(v => {
+      v.act = lines.map((l, k) => Math.abs(l.n[0]*v.p[0] + l.n[1]*v.p[1] - l.b) <= tol(l, v.p) ? k : -1).filter(k => k >= 0);
+      v.clip = v.act.some(k => lines[k].kind === "clip");
+    });
+    if (verts.length) {
+      const g = verts.reduce((s, v) => [s[0] + v.p[0]/verts.length, s[1] + v.p[1]/verts.length], [0,0]);
+      verts.sort((a, b) => Math.atan2(a.p[1]-g[1], a.p[0]-g[0]) - Math.atan2(b.p[1]-g[1], b.p[0]-g[0]));
+    }
+    return { lines, verts };
+  }
+  function build2(lp) {
+    const c = lp.c.map(parseNum), A = lp.A.map(r => r.map(parseNum)), b = lp.b.map(parseNum);
+    if (c.some(isNaN) || A.some(r => r.some(isNaN)) || b.some(isNaN)) return null;
+    const cons = A.map((n, i) => ({ n, b: b[i], kind: "k" + (i+1) }));
+    const fv = p => c[0]*p[0] + c[1]*p[1];
+    let E = [0, 0];
+    cons.forEach(k => { for (let i = 0; i < 2; i++) if (Math.abs(k.n[i]) > 1e-12) { const t = k.b / k.n[i]; if (t > 1e-9) E[i] = Math.max(E[i], t); } });
+    const big = enumerate2(cons, [1e4, 1e4]);
+    if (!big.verts.length) {
+      return { dim: 2, infeasible: true, c, cons, E: E.map(e => Math.max(e * 1.15, 1)), poly: [], edges: [], real: [], opt: [] };
+    }
+    const real = big.verts.filter(v => !v.clip).map(v => v.p);
+    const regionUnb = big.verts.some(v => v.clip);
+    const fReal = Math.max(...real.map(fv));
+    const fBig = Math.max(...big.verts.map(v => fv(v.p)));
+    const unbounded = fBig > fReal + 1e-6 * (1 + Math.abs(fReal));
+    real.forEach(p => p.forEach((v, i) => E[i] = Math.max(E[i], v)));
+    if (regionUnb) { const m = Math.max(...E, 1) * 1.5; E = [m, m]; }
+    else E = E.map(e => Math.max(e * 1.15, 1));
+    const d = enumerate2(cons, E);
+    const poly = d.verts.map(v => v.p);
+    const edges = [];
+    if (poly.length >= 2) for (let i = 0; i < d.verts.length; i++) {
+      const a = d.verts[i], bb = d.verts[(i + 1) % d.verts.length];
+      if (d.verts.length === 2 && i === 1) break;
+      const com = a.act.filter(k => bb.act.includes(k));
+      edges.push({ a: a.p, b: bb.p, clip: com.some(k => d.lines[k].kind === "clip") });
+    }
+    const czero = len2(c) < 1e-12;
+    const opt = (unbounded || czero) ? [] : real.filter(p => fv(p) >= fReal - 1e-7 * (1 + Math.abs(fReal)));
+    const fAll = poly.map(fv);
+    return { dim: 2, c, cons, E, real, opt, poly, edges, unbounded, czero, fmax: fReal,
+             flo: Math.min(...fAll), fhi: Math.max(...fAll) };
+  }
+
+  // ---------- simplex (largest coefficient) ----------
+  const SUB = ["₁","₂","₃","₄","₅","₆","₇","₈"];
   function runSimplex(c, A, b) {
-    const m = A.length, nv = 3 + m;
-    const names = ["x","y","z"].concat(A.map((_, i) => "s" + SUB[i]));
+    const m = A.length, n = c.length, nv = n + m;
+    const names = ["x","y","z"].slice(0, n).concat(A.map((_, i) => "s" + SUB[i]));
     if (b.some(v => v < -1e-12)) return { error: "The simplex walk here starts from the slack basis at the origin, which needs every right-hand side to be at least 0. Make all right-hand sides non-negative to see it." };
     let T = A.map((r, i) => r.concat(A.map((_, k) => k === i ? 1 : 0), [b[i]]));
     let obj = c.map(v => -v).concat(A.map(() => 0), [0]);
-    const basis = A.map((_, i) => 3 + i);
+    const basis = A.map((_, i) => n + i);
     const steps = [];
-    const pointOf = () => { const p = [0,0,0]; basis.forEach((v, i) => { if (v < 3) p[v] = T[i][nv]; }); return p; };
+    const pointOf = () => { const p = Array(n).fill(0); basis.forEach((v, i) => { if (v < n) p[v] = T[i][nv]; }); return p; };
     for (let it = 0; it < 60; it++) {
       const cands = [];
       for (let j = 0; j < nv; j++) {
         if (basis.includes(j) || obj[j] >= -1e-9) continue;
         const col = T.map(r => r[j]);
         const norm = Math.sqrt(1 + col.reduce((s, v) => s + v*v, 0));
-        const d = [0,0,0]; if (j < 3) d[j] = 1;
-        basis.forEach((bv, i) => { if (bv < 3) d[bv] -= col[i]; });
+        const d = Array(n).fill(0); if (j < n) d[j] = 1;
+        basis.forEach((bv, i) => { if (bv < n) d[bv] -= col[i]; });
         let t = Infinity, row = -1;
         col.forEach((a, i) => {
           if (a <= 1e-9) return;
@@ -341,19 +451,18 @@ tr.pick td { color: var(--path); font-weight: 500; }
   const editor = document.getElementById("editor");
   function cell(id, val, aria) { return `<input id="${id}" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" value="${val}" aria-label="${aria}">`; }
   function renderEditor() {
-    const vars = ["x", "y", "z"];
+    const vars = ["x", "y", "z"].slice(0, lp.c.length);
     const term = (id, val, j, aria) => `${j ? '<span class="v">+</span>' : ""}${cell(id, val, aria)}<span>${vars[j]}</span>`;
-    let h = `<div class="row"><span class="kw">max</span>${lp.c.map((v, j) => term(`c-${j}`, v, j, `Objective coefficient of ${vars[j]}`)).join("")}</div>`;
-    h += `<div class="sub">subject to</div>`;
+    let h = `<div class="row"><span class="kw" style="width:auto;font-size:inherit;color:var(--ink);margin-right:4px">maximize</span>${lp.c.map((v, j) => term(`c-${j}`, v, j, `Objective coefficient of ${vars[j]}`)).join("")}</div>`;
+    h += `<div class="sub">subject to ${vars.join(", ")} ≥ 0 and</div>`;
     lp.A.forEach((row, i) => {
       h += `<div class="row"><span class="tag" style="color:var(--k${i+1})">(${i+1})</span>` +
            row.map((v, j) => term(`a-${i}-${j}`, v, j, `Constraint ${i+1}, coefficient of ${vars[j]}`)).join("") +
            `<span class="v">≤</span>${cell(`b-${i}`, lp.b[i], `Constraint ${i+1}, right-hand side`)}` +
            `<button class="rm" data-rm="${i}" aria-label="Remove constraint ${i+1}" ${lp.A.length <= 1 ? "disabled" : ""}>×</button></div>`;
     });
-    h += `<div class="sub">x, y, z ≥ 0</div>`;
     h += `<div class="err" id="err" hidden>Use numbers like 3, -1.5 or 2/3 in the highlighted boxes.</div>`;
-    h += `<div class="tools"><button class="linkbtn" id="add" ${lp.A.length >= MAXC ? "disabled" : ""}>+ Add constraint</button><button class="linkbtn" id="restore">Restore example</button></div>`;
+    h += `<div class="tools"><button class="linkbtn" id="add" ${lp.A.length >= MAXC ? "disabled" : ""}>+ add constraint</button></div>`;
     editor.innerHTML = h;
     markInvalid();
   }
@@ -373,20 +482,21 @@ tr.pick td { color: var(--path); font-weight: 500; }
   editor.addEventListener("click", e => {
     const t = e.target;
     if (t.dataset && t.dataset.rm !== undefined) { const i = +t.dataset.rm; lp.A.splice(i, 1); lp.b.splice(i, 1); renderEditor(); update(true); }
-    else if (t.id === "add" && lp.A.length < MAXC) { lp.A.push(["1","1","1"]); lp.b.push("5"); renderEditor(); update(true); }
-    else if (t.id === "restore") { lp = JSON.parse(JSON.stringify(EXAMPLE)); renderEditor(); update(true); }
+    else if (t.id === "add" && lp.A.length < MAXC) { lp.A.push(Array(lp.c.length).fill("1")); lp.b.push("5"); renderEditor(); update(true); }
+    else if (t.id === "restore") { lp = dim === 3 ? clone(EXAMPLE) : dropZ(EXAMPLE); renderEditor(); update(true); }
   });
 
   // ---------- view ----------
   const st = { yaw: -2.3, pitch: 0.42, c: 6, zoom: 1, step: 0 };
-  let M = null, sim = null, timer = 0;
+  let M = null, sim = null;
   const cv = document.getElementById("cv"), ctx = cv.getContext("2d");
   let W = 0, H = 0, scale = 1, center = [0,0,0], colors = {}, mono = "monospace";
+  const off3 = [0, 0, 0];   // user offset of the 3D rotation origin (right-drag)
   const slider = document.getElementById("c");
 
   function readColors() {
     const cs = getComputedStyle(document.documentElement);
-    ["--ink","--muted","--rule","--k1","--k2","--k3","--k4","--level","--opt","--face","--panel","--path"].forEach(k => colors[k] = cs.getPropertyValue(k).trim());
+    ["--ink","--muted","--rule","--k1","--k2","--k3","--k4","--k5","--k6","--k7","--k8","--level","--opt","--face","--panel","--path"].forEach(k => colors[k] = cs.getPropertyValue(k).trim());
     mono = cs.getPropertyValue("--font-mono");
   }
   function rgba(hex, a) {
@@ -395,13 +505,127 @@ tr.pick td { color: var(--path); font-weight: 500; }
     const n = parseInt(h, 16);
     return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;
   }
-  function fit() {
-    if (!M) return;
+  function fit() { if (!M || !W) return; if (M.dim === 2) fit2(); else fit3(); }
+  function draw() { if (!W || !M) return; if (M.dim === 2) draw2(); else draw3(); }
+
+  // ----- 2D view: pan + zoom -----
+  const v2 = { zoom: 1, px: 0, py: 0 };
+  let s2 = 1, c2 = [0, 0];
+  function fit2() {
+    c2 = [M.E[0] * 0.5, M.E[1] * 0.5];
+    s2 = Math.min((W - 70) / M.E[0], (H - 70) / M.E[1]);
+  }
+  function P2(p) { const s = s2 * v2.zoom; return { x: W/2 + (p[0] - c2[0]) * s + v2.px, y: H/2 - (p[1] - c2[1]) * s + v2.py }; }
+  function inv2(x, y) { const s = s2 * v2.zoom; return [(x - W/2 - v2.px) / s + c2[0], -(y - H/2 - v2.py) / s + c2[1]]; }
+  function zoomAt(mx, my, z) {
+    z = Math.max(0.2, Math.min(25, z));
+    const k = z / v2.zoom;
+    v2.px = (mx - W/2) - ((mx - W/2) - v2.px) * k;
+    v2.py = (my - H/2) - ((my - H/2) - v2.py) * k;
+    v2.zoom = z;
+  }
+  function lineInView(n, b) {
+    const [x0, y1] = inv2(0, 0), [x1, y0] = inv2(W, H), pts = [];
+    const add = p => { if (!pts.some(q => Math.hypot(q[0]-p[0], q[1]-p[1]) < 1e-9 * (1 + len2(p)))) pts.push(p); };
+    if (Math.abs(n[1]) > 1e-12) for (const x of [x0, x1]) { const y = (b - n[0]*x) / n[1]; if (y >= y0 - 1e-9 && y <= y1 + 1e-9) add([x, y]); }
+    if (Math.abs(n[0]) > 1e-12) for (const y of [y0, y1]) { const x = (b - n[1]*y) / n[0]; if (x >= x0 - 1e-9 && x <= x1 + 1e-9) add([x, y]); }
+    return pts.length >= 2 ? [pts[0], pts[1]] : null;
+  }
+  function niceStep(range) {
+    const raw = range / 8, p = Math.pow(10, Math.floor(Math.log10(raw))), m = raw / p;
+    return (m < 1.5 ? 1 : m < 3.5 ? 2 : m < 7.5 ? 5 : 10) * p;
+  }
+  const tickTxt = v => String(+v.toFixed(6)).replace("-", "−");
+  function draw2() {
+    ctx.clearRect(0, 0, W, H);
+    const [x0, y1] = inv2(0, 0), [x1, y0] = inv2(W, H);
+    const step = niceStep(Math.max(x1 - x0, y1 - y0));
+    const O = P2([0, 0]);
+    // grid
+    ctx.lineWidth = 1; ctx.strokeStyle = rgba(colors["--muted"], 0.12);
+    for (let x = Math.ceil(x0 / step) * step; x <= x1; x += step) { const sx = P2([x, 0]).x; ctx.beginPath(); ctx.moveTo(sx, 0); ctx.lineTo(sx, H); ctx.stroke(); }
+    for (let y = Math.ceil(y0 / step) * step; y <= y1; y += step) { const sy = P2([0, y]).y; ctx.beginPath(); ctx.moveTo(0, sy); ctx.lineTo(W, sy); ctx.stroke(); }
+    // axes + ticks
+    const ax = Math.max(0, Math.min(H, O.y)), ay = Math.max(0, Math.min(W, O.x));
+    line({ x: 0, y: ax }, { x: W, y: ax }, rgba(colors["--muted"], 0.7), 1);
+    line({ x: ay, y: 0 }, { x: ay, y: H }, rgba(colors["--muted"], 0.7), 1);
+    ctx.font = "11px " + mono; ctx.fillStyle = colors["--muted"];
+    const ly = Math.min(H - 6, ax + 15), lx = Math.max(4, ay - 6);
+    ctx.textAlign = "center";
+    for (let x = Math.ceil(x0 / step) * step; x <= x1; x += step) { if (Math.abs(x) < step / 2) continue; ctx.fillText(tickTxt(x), P2([x, 0]).x, ly); }
+    ctx.textAlign = "right";
+    for (let y = Math.ceil(y0 / step) * step; y <= y1; y += step) { if (Math.abs(y) < step / 2) continue; ctx.fillText(tickTxt(y), lx, P2([0, y]).y + 4); }
+    ctx.fillText("0", lx, ly);
+    ctx.textAlign = "left";
+    ctx.font = "italic 500 14px " + mono;
+    ctx.fillText("x", W - 16, ax - 8);
+    ctx.fillText("y", ay + 8, 16);
+
+    // constraint lines
+    M.cons.forEach(k => {
+      if (len2(k.n) < 1e-12) return;
+      const seg = lineInView(k.n, k.b);
+      if (seg) line(P2(seg[0]), P2(seg[1]), rgba(colors["--" + k.kind], 0.8), 1.2, [6, 4]);
+    });
+    // feasible region
+    if (M.poly.length >= 3) poly(M.poly.map(P2), rgba(colors["--k2"], 0.16), null);
+    M.edges.forEach(e => line(P2(e.a), P2(e.b), rgba(colors["--ink"], e.clip ? 0.3 : 0.8), e.clip ? 1 : 1.5, e.clip ? [3, 3] : null));
+    markOptSet(P2, p => p);
+
+    // level line
+    const active = !M.infeasible && !M.czero;
+    if (active) {
+      const seg = lineInView(M.c, st.c);
+      if (seg) line(P2(seg[0]), P2(seg[1]), rgba(colors["--level"], 0.45), 1);
+      const pts = [];
+      M.edges.forEach(({ a, b }) => {
+        const fa = M.c[0]*a[0] + M.c[1]*a[1] - st.c, fb = M.c[0]*b[0] + M.c[1]*b[1] - st.c;
+        if (Math.abs(fa) < 1e-9) pts.push(a);
+        if (fa * fb < 0) { const t = fa / (fa - fb); pts.push([a[0] + t*(b[0]-a[0]), a[1] + t*(b[1]-a[1])]); }
+      });
+      if (pts.length >= 2) {
+        let best = [pts[0], pts[1]], dmax = -1;
+        pts.forEach(p => pts.forEach(q => { const d = Math.hypot(p[0]-q[0], p[1]-q[1]); if (d > dmax) { dmax = d; best = [p, q]; } }));
+        line(P2(best[0]), P2(best[1]), colors["--level"], 3);
+      }
+    }
+
+    // simplex path
+    const cur = null;
+    drawPath(P2, len2, Math.max(...M.E));
+
+    // corners
+    const mid = M.real.length ? P2(M.real.reduce((s, p) => [s[0] + p[0]/M.real.length, s[1] + p[1]/M.real.length], [0, 0])) : O;
+    M.real.forEach(p => {
+      const P = P2(p), isOpt = M.opt.some(q => close2(q, p));
+      ctx.fillStyle = isOpt ? colors["--opt"] : colors["--ink"];
+      ctx.beginPath(); ctx.arc(P.x, P.y, isOpt ? 5.5 : 3.5, 0, Math.PI*2); ctx.fill();
+      if (!isOpt) return;
+      ctx.strokeStyle = colors["--opt"]; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(P.x, P.y, 10, 0, Math.PI*2); ctx.stroke();
+      return;
+      const txt = fmtP(p);
+      ctx.font = "500 11.5px " + mono;
+      const w = ctx.measureText(txt).width;
+      let dx = P.x - mid.x, dy = P.y - mid.y; const Ld = Math.hypot(dx, dy) || 1; dx /= Ld; dy /= Ld;
+      let lx2 = P.x + dx*14 + (dx < -0.3 ? -w : dx > 0.3 ? 0 : -w/2), ly2 = P.y + dy*14 + 4;
+      lx2 = Math.max(4, Math.min(W - w - 4, lx2)); ly2 = Math.max(12, Math.min(H - 4, ly2));
+      label(txt, lx2, ly2, colors["--opt"], 500);
+    });
+    if (cur) {
+      const P = P2(cur.point);
+      ctx.strokeStyle = colors["--path"]; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(P.x, P.y, 14, 0, Math.PI*2); ctx.stroke();
+    }
+  }
+
+  // ----- 3D view -----
+  function fit3() {
     center = M.E.map(e => e * 0.42);
     scale = Math.min(W, H) / 2 / (0.46 * len(M.E));
   }
   function project(p) {
-    const x = p[0]-center[0], y = p[1]-center[1], z = p[2]-center[2];
+    const x = p[0]-center[0]-off3[0], y = p[1]-center[1]-off3[1], z = p[2]-center[2]-off3[2];
     const cy = Math.cos(st.yaw), sy = Math.sin(st.yaw);
     const u = x*cy - y*sy, v = x*sy + y*cy;
     const cp = Math.cos(st.pitch), sp = Math.sin(st.pitch);
@@ -443,8 +667,7 @@ tr.pick td { color: var(--path); font-weight: 500; }
     return orderInPlane(pts, M.c);
   }
 
-  function draw() {
-    if (!W || !M) return;
+  function draw3() {
     ctx.clearRect(0, 0, W, H);
     const E = M.E, o = project([0,0,0]);
     [[[E[0],0,0],"x"],[[0,E[1],0],"y"],[[0,0,E[2]],"z"]].forEach(([e, n]) => {
@@ -483,43 +706,15 @@ tr.pick td { color: var(--path); font-weight: 500; }
     });
     if (sec.length === 2) line(project(sec[0]), project(sec[1]), colors["--level"], 2.5);
     M.edges.forEach(e => line(project(e.a), project(e.b), rgba(colors["--ink"], e.clip ? 0.3 : 0.75), e.clip ? 1 : 1.2, e.clip ? [3, 3] : null));
+    markOptSet(project, pts => orderInPlane(pts, M.c));
 
-    // gradient arrow
-    if (active && M.verts.length) {
-      const g = M.verts.reduce((s, v) => [s[0]+v.p[0], s[1]+v.p[1], s[2]+v.p[2]], [0,0,0]).map(v => v / M.verts.length);
-      const L = 0.12 * len(E), cn = len(M.c);
-      const A = project(g), B = project([g[0] + L*M.c[0]/cn, g[1] + L*M.c[1]/cn, g[2] + L*M.c[2]/cn]);
-      line(A, B, colors["--ink"], 1.6);
-      const ang = Math.atan2(B.y - A.y, B.x - A.x);
-      ctx.fillStyle = colors["--ink"];
-      ctx.beginPath(); ctx.moveTo(B.x, B.y);
-      ctx.lineTo(B.x - 9*Math.cos(ang - 0.4), B.y - 9*Math.sin(ang - 0.4));
-      ctx.lineTo(B.x - 9*Math.cos(ang + 0.4), B.y - 9*Math.sin(ang + 0.4));
-      ctx.closePath(); ctx.fill();
-      ctx.font = "500 13px " + mono; ctx.fillText("∇f", B.x + 6, B.y - 6);
-    }
 
-    // simplex path and the improving edges at the current step
-    let cur = null;
-    if (sim && sim.steps) {
-      const S = sim.steps, k = sim.pages[Math.min(st.step, sim.pages.length - 1)][0], pc = colors["--path"];
-      for (let i = 1; i <= k; i++) arrowLine(project(S[i-1].point), project(S[i].point), pc, 2.6);
-      cur = S[k];
-      cur.cands.forEach(cd => {
-        const pick = cur.best && cd.j === cur.best.j;
-        let end;
-        if (isFinite(cd.t) && cd.t > 1e-12) end = cd.d.map((v, i) => cur.point[i] + cd.t * v);
-        else {
-          const dl = len(cd.d); if (dl < 1e-12) return;
-          const L = (isFinite(cd.t) ? 0.08 : 0.3) * len(M.E);
-          end = cd.d.map((v, i) => cur.point[i] + L * v / dl);
-        }
-        arrowLine(project(cur.point), project(end), rgba(pc, pick ? 0.95 : 0.45), pick ? 2 : 1.2, [5, 4]);
-      });
-    }
+    // simplex path
+    const cur = null;
+    drawPath(project, len, len(M.E));
 
     // points
-    M.hollow.forEach(p => {
+    [].forEach(p => {
       const P = project(p);
       ctx.fillStyle = colors["--panel"]; ctx.strokeStyle = colors["--muted"]; ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.arc(P.x, P.y, 4, 0, Math.PI*2); ctx.fill(); ctx.stroke();
@@ -532,6 +727,7 @@ tr.pick td { color: var(--path); font-weight: 500; }
       if (!isOpt) return;
       ctx.strokeStyle = colors["--opt"]; ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.arc(P.x, P.y, 10, 0, Math.PI*2); ctx.stroke();
+      return;
       const txt = fmtP(p);
       ctx.font = "500 11.5px " + mono;
       const w = ctx.measureText(txt).width;
@@ -545,6 +741,14 @@ tr.pick td { color: var(--path); font-weight: 500; }
       ctx.strokeStyle = colors["--path"]; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(P.x, P.y, 14, 0, Math.PI*2); ctx.stroke();
     }
+  }
+  // Highlight a tied optimum: the whole optimal edge or face in red
+  function markOptSet(proj, order) {
+    if (!M.opt || M.opt.length < 2) return;
+    const oc = colors["--opt"];
+    if (M.opt.length === 2) { line(proj(M.opt[0]), proj(M.opt[1]), oc, 4); return; }
+    const pr = order(M.opt).map(proj);
+    poly(pr, rgba(oc, 0.35), oc, 3);
   }
   function arrowLine(A, B, color, lw, dash) {
     if (Math.hypot(B.x - A.x, B.y - A.y) < 3) return;
@@ -561,44 +765,23 @@ tr.pick td { color: var(--path); font-weight: 500; }
   const fnum = v => { const s = frac(v); return s.length > 9 ? (+v.toFixed(3)).toString().replace("-", "−") : s; };
   function renderSimplex() {
     const txt = document.getElementById("simtext"), grid = document.getElementById("simgrid");
-    const prev = document.getElementById("prev"), next = document.getElementById("next"), play = document.getElementById("play");
-    const stepno = document.getElementById("stepno");
     if (!sim || sim.error) {
       txt.innerHTML = `<span class="simerr">${sim ? sim.error : ""}</span>`;
-      txt.hidden = false; grid.hidden = true; prev.disabled = next.disabled = play.disabled = true; stepno.textContent = "–";
+      txt.hidden = false; grid.hidden = true;
       return;
     }
     grid.hidden = false; txt.hidden = true;
-    const S = sim.steps, P = sim.pages, k = st.step, [fi, ti] = P[k], s = S[fi], nm = sim.names, nv = sim.nv;
-    stepno.textContent = ti === null && S[fi].kind === "optimal" ? "Already optimal" : `Pivot ${k + 1} of ${P.length}`;
-    prev.disabled = k === 0; next.disabled = k === P.length - 1; play.disabled = P.length < 2;
-    const tag = st => st.kind === "optimal" ? " · optimal" : st.kind === "unbounded" ? " · unbounded" : "";
-    document.getElementById("lab-from").textContent = `Tableau ${fi + 1}${tag(s)}`;
-    document.getElementById("to-block").hidden = ti === null;
-    document.getElementById("pair-arrow").hidden = ti === null;
-    if (ti !== null) {
-      document.getElementById("lab-to").textContent = `Tableau ${ti + 1}${tag(S[ti])}`;
-      document.getElementById("tab2").innerHTML = tableHTML(S[ti], false);
-    }
-    play.textContent = timer ? "Pause" : "Play";
-
-    if (s.kind === "optimal") {
-      txt.innerHTML = `No entry in the f row is negative, so this tableau is <b>optimal</b>: f = ${fnum(s.f)} at ${fmtP(s.point)}.`;
-    } else if (s.kind === "unbounded") {
-      txt.innerHTML = `<b>${nm[s.enter]}</b> enters, but its column has no positive entry, so the ratio test never stops it. f grows without limit along this edge.`;
-    } else {
-      const lv = nm[s.basis[s.leave]];
-      const ratios = s.T.map((r, i) => s.ratios[i] === null ? null : `${nm[s.basis[i]]}: ${fnum(r[nv])}/${fnum(r[s.enter])} = ${fnum(s.ratios[i])}`).filter(Boolean).join(", ");
-      const degen = s.best.t < 1e-12 ? " This pivot is degenerate, so the point does not move." : "";
-      txt.innerHTML = `At ${fmtP(s.point)} with f = ${fnum(s.f)}: <b>${nm[s.enter]}</b> enters because its f-row entry ${fnum(s.best.r)} is the most negative. Ratio test (${ratios}) gives the minimum at <b>${lv}</b>, so ${lv} leaves. Pivot on ${fnum(s.T[s.leave][s.enter])}.${degen}`;
-    }
-
-    document.getElementById("tab").innerHTML = tableHTML(s, true);
+    const S = sim.steps;
+    const tag = s => s.kind === "optimal" ? " · optimal" : s.kind === "unbounded" ? " · unbounded" : "";
+    grid.innerHTML = S.map((s, i) =>
+      (i ? `<div class="arrow" aria-hidden="true">↓</div>` : "") +
+      `<div class="tb"><div class="label">tableau ${i + 1}${tag(s)}</div><div class="tablewrap"><table>${tableHTML(s, s.kind !== "optimal")}</table></div></div>`
+    ).join("");
   }
   function tableHTML(s, hl) {
     const nm = sim.names, nv = sim.nv;
     const en = hl ? s.enter : -1, lvr = hl ? s.leave : -1;
-    let h = `<thead><tr><th>Basis</th>${nm.map((n, j) => `<th class="${j === en ? "ent" : ""}">${n}</th>`).join("")}<th class="rhs">RHS</th></tr></thead><tbody>`;
+    let h = `<thead><tr><th>basis</th>${nm.map((n, j) => `<th class="${j === en ? "ent" : ""}">${n}</th>`).join("")}<th class="rhs">RHS</th></tr></thead><tbody>`;
     s.T.forEach((r, i) => {
       h += `<tr class="${i === lvr ? "lv" : ""}"><td>${nm[s.basis[i]]}</td>` +
         r.slice(0, nv).map((v, j) => `<td class="${j === en ? (i === lvr ? "piv" : "ent") : ""}">${fnum(v)}</td>`).join("") +
@@ -607,23 +790,17 @@ tr.pick td { color: var(--path); font-weight: 500; }
     h += `<tr class="objrow"><td>f</td>${s.obj.slice(0, nv).map((v, j) => `<td class="${j === en ? "ent" : ""}">${fnum(v)}</td>`).join("")}<td class="rhs">${fnum(s.obj[nv])}</td></tr></tbody>`;
     return h;
   }
-  function goStep(k) {
+  // full simplex path from the origin to the last tableau (plus the escape direction if unbounded)
+  function drawPath(proj, norm, scaleLen) {
     if (!sim || !sim.steps) return;
-    st.step = Math.max(0, Math.min(sim.pages.length - 1, k));
-    renderSimplex(); draw();
+    const S = sim.steps, pc = colors["--path"];
+    for (let i = 1; i < S.length; i++) arrowLine(proj(S[i-1].point), proj(S[i].point), pc, 2.6);
+    const last = S[S.length - 1];
+    if (last.kind === "unbounded" && last.best) {
+      const dl = norm(last.best.d);
+      if (dl > 1e-12) arrowLine(proj(last.point), proj(last.best.d.map((v, i) => last.point[i] + 0.3 * scaleLen * v / dl)), pc, 2, [5, 4]);
+    }
   }
-  function stopPlay() { if (timer) { clearInterval(timer); timer = 0; } }
-  document.getElementById("prev").addEventListener("click", () => { stopPlay(); goStep(st.step - 1); });
-  document.getElementById("next").addEventListener("click", () => { stopPlay(); goStep(st.step + 1); });
-  document.getElementById("play").addEventListener("click", () => {
-    if (timer) { stopPlay(); renderSimplex(); return; }
-    if (st.step >= sim.pages.length - 1) goStep(0);
-    timer = setInterval(() => {
-      if (st.step >= sim.pages.length - 1) { stopPlay(); renderSimplex(); return; }
-      goStep(st.step + 1);
-    }, 1400);
-    renderSimplex();
-  });
 
   function renderResult() {
     const r = document.getElementById("result");
@@ -631,25 +808,25 @@ tr.pick td { color: var(--path); font-weight: 500; }
     if (M.infeasible) r.textContent = "No point satisfies all the constraints, so there is nothing to maximize.";
     else if (M.unbounded) r.textContent = "f has no maximum: the region keeps going in a direction where f grows without limit.";
     else if (M.czero) r.textContent = "All objective coefficients are 0, so f = 0 everywhere.";
-    else if (M.opt.length === 1) r.innerHTML = `Maximum <b>f = ${frac(M.fmax)}</b> at ${fmtP(M.opt[0])}`;
-    else r.innerHTML = `Maximum <b>f = ${frac(M.fmax)}</b>, reached at ${M.opt.length} corners (${M.opt.map(fmtP).join(", ")}) and every point between them`;
+    else if (M.opt.length === 1) r.innerHTML = `maximum <b>f = ${frac(M.fmax)}</b> at ${fmtP(M.opt[0])}`;
+    else r.innerHTML = `maximum <b>f = ${frac(M.fmax)}</b> at ${M.opt.length === 2 ? "edge" : "face"} ${M.opt.map(fmtP).join(", ")}`;
   }
   function setSlider(reset) {
     const off = !M || M.infeasible || M.czero || M.fhi - M.flo < 1e-9;
     slider.disabled = off;
     if (off) { document.getElementById("cval").textContent = "–"; return; }
-    const lo = M.flo, hi = M.fhi + 0.1 * (M.fhi - M.flo);
-    slider.min = lo; slider.max = hi; slider.step = (hi - lo) / 600;
+    const lo = M.flo, hi = M.fhi;
+    slider.min = lo; slider.max = hi; slider.step = "any";
     if (reset || st.c < lo || st.c > hi) st.c = lo + 0.3 * (M.fhi - lo);
     slider.value = st.c;
     document.getElementById("cval").textContent = st.c.toFixed(2);
   }
   function update(reset) {
-    const m = build(lp);
+    const m = dim === 3 ? build(lp) : build2(lp);
     if (!m) return;
     M = m;
-    try { localStorage.setItem(KEY, JSON.stringify(lp)); } catch (e) {}
-    stopPlay();
+    store.dim = dim; store[dim === 3 ? "lp3" : "lp2"] = lp;
+    try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {}
     sim = runSimplex(M.c, M.cons.map(k => k.n), M.cons.map(k => k.b));
     st.step = 0;
     fit(); setSlider(reset); renderResult(); renderSimplex(); draw();
@@ -657,30 +834,66 @@ tr.pick td { color: var(--path); font-weight: 500; }
 
   slider.addEventListener("input", () => { st.c = +slider.value; document.getElementById("cval").textContent = st.c.toFixed(2); draw(); });
 
-  // drag to rotate, wheel / pinch to zoom
+  // 3D: drag to rotate. 2D: drag to pan. Both: wheel / pinch to zoom.
   const ptrs = new Map();
   let drag = null, pinch = null;
+  const local = (x, y) => { const r = cv.getBoundingClientRect(); return [x - r.left, y - r.top]; };
   cv.addEventListener("pointerdown", e => {
     cv.setPointerCapture(e.pointerId);
     ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (ptrs.size === 1) drag = { x: e.clientX, y: e.clientY, yaw: st.yaw, pitch: st.pitch };
-    if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), zoom: st.zoom }; drag = null; }
+    if (ptrs.size === 1) drag = { x: e.clientX, y: e.clientY, yaw: st.yaw, pitch: st.pitch, px: v2.px, py: v2.py,
+                                  pan3: dim === 3 && (e.button === 2 || e.shiftKey), off: off3.slice() };
+    if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), zoom: dim === 2 ? v2.zoom : st.zoom }; drag = null; }
   });
   cv.addEventListener("pointermove", e => {
     if (!ptrs.has(e.pointerId)) return;
     ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pinch && ptrs.size === 2) {
-      const [a, b] = [...ptrs.values()];
-      st.zoom = Math.max(0.35, Math.min(4, pinch.zoom * Math.hypot(a.x - b.x, a.y - b.y) / pinch.d));
+      const [a, b] = [...ptrs.values()], ratio = Math.hypot(a.x - b.x, a.y - b.y) / pinch.d;
+      if (dim === 2) { const [mx, my] = local((a.x + b.x) / 2, (a.y + b.y) / 2); zoomAt(mx, my, pinch.zoom * ratio); }
+      else st.zoom = Math.max(0.35, Math.min(4, pinch.zoom * ratio));
     } else if (drag) {
-      st.yaw = drag.yaw + (e.clientX - drag.x) * 0.01;
-      st.pitch = Math.max(-0.2, Math.min(1.45, drag.pitch + (e.clientY - drag.y) * 0.008));
+      if (dim === 2) { v2.px = drag.px + (e.clientX - drag.x); v2.py = drag.py + (e.clientY - drag.y); }
+      else if (drag.pan3) {
+        // move the rotation origin so the scene follows the pointer
+        const s = scale * st.zoom, dx = (e.clientX - drag.x) / s, dy = (e.clientY - drag.y) / s;
+        const cy = Math.cos(st.yaw), sy = Math.sin(st.yaw), cp = Math.cos(st.pitch), sp = Math.sin(st.pitch);
+        const R = [cy, -sy, 0], U = [sy * sp, cy * sp, cp];
+        for (let i = 0; i < 3; i++) off3[i] = drag.off[i] - R[i] * dx + U[i] * dy;
+      } else {
+        st.yaw = drag.yaw + (e.clientX - drag.x) * 0.01;
+        st.pitch = Math.max(-0.2, Math.min(1.45, drag.pitch + (e.clientY - drag.y) * 0.008));
+      }
     }
     draw();
   });
   const end = e => { ptrs.delete(e.pointerId); pinch = null; drag = null; };
   cv.addEventListener("pointerup", end); cv.addEventListener("pointercancel", end);
-  cv.addEventListener("wheel", e => { e.preventDefault(); st.zoom = Math.max(0.35, Math.min(4, st.zoom * Math.exp(-e.deltaY * 0.0015))); draw(); }, { passive: false });
+  cv.addEventListener("contextmenu", e => e.preventDefault());
+  cv.addEventListener("wheel", e => {
+    e.preventDefault();
+    const k = Math.exp(-e.deltaY * 0.0015);
+    if (dim === 2) { const [mx, my] = local(e.clientX, e.clientY); zoomAt(mx, my, v2.zoom * k); }
+    else st.zoom = Math.max(0.35, Math.min(4, st.zoom * k));
+    draw();
+  }, { passive: false });
+
+  // 2D / 3D switch
+  function renderDim() {
+    document.getElementById("d2").setAttribute("aria-pressed", String(dim === 2));
+    document.getElementById("d3").setAttribute("aria-pressed", String(dim === 3));
+    cv.setAttribute("aria-label", dim === 3 ? "Rotatable 3D view of the feasible region" : "2D view of the feasible region; drag to pan, scroll to zoom");
+  }
+  function setDim(d) {
+    if (d === dim) return;
+    if (d === 2) { store.lp3 = lp; lp = dropZ(store.lp3); }
+    else { lp = store.lp3; }
+    dim = d;
+    v2.zoom = 1; v2.px = 0; v2.py = 0; off3.fill(0);
+    renderDim(); renderEditor(); update(true);
+  }
+  document.getElementById("d2").addEventListener("click", () => setDim(2));
+  document.getElementById("d3").addEventListener("click", () => setDim(3));
 
   const refresh = () => { readColors(); draw(); };
   try { window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", refresh); } catch (e) {}
@@ -688,6 +901,7 @@ tr.pick td { color: var(--path); font-weight: 500; }
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(refresh);
 
   readColors();
+  renderDim();
   renderEditor();
   update(true);
   st.c = Math.min(Math.max(6, +slider.min), +slider.max); slider.value = st.c;
