@@ -118,7 +118,7 @@ input[type="range"] { width: 100%; accent-color: var(--level); }
 .result b { color: var(--opt); font-weight: 500; }
 
 .simplex { display: grid; gap: 12px; border-top: 1px solid var(--rule); padding-top: 18px; min-width: 0; min-height: 0; grid-template-rows: auto auto minmax(0, 1fr); align-content: start; }
-#simgrid { min-height: 0; overflow-y: auto; padding-right: 6px; padding-bottom: 4px; }
+#simgrid { min-height: 0; overflow-y: auto; scrollbar-gutter: stable; padding-right: 6px; padding-bottom: 4px; overflow-anchor: none; }
 .simhead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 20px; }
 h2 { font-family: var(--font-display); font-weight: 600; font-size: 19px; margin: 0; }
 .rule { font-size: 13.5px; color: var(--muted); margin: 0; max-width: 75ch; }
@@ -141,6 +141,9 @@ tr.objrow td { border-top: 2px solid var(--rule); }
 td.rhs, th.rhs { border-left: 1px solid var(--rule); }
 .ent { background: color-mix(in srgb, var(--path) 9%, transparent); }
 tr.lv td { background: color-mix(in srgb, var(--path) 9%, transparent); }
+th button.pv { font: inherit; color: var(--path); background: none; border: 0; padding: 2px 6px; margin: -2px -6px; border-radius: 4px; cursor: pointer; text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 3px; }
+th button.pv:hover { background: color-mix(in srgb, var(--path) 16%, transparent); }
+th button.pv:focus-visible { outline: 2px solid var(--path); outline-offset: 1px; }
 td.piv { background: color-mix(in srgb, var(--path) 28%, transparent); color: var(--ink); font-weight: 600; }
 tr.pick td { color: var(--path); font-weight: 500; }
 .simerr { color: var(--muted); }
@@ -182,7 +185,7 @@ tr.pick td { color: var(--path); font-weight: 500; }
     </aside>
 
     <section class="simplex" aria-label="Simplex method">
-      <h2>simplex method, largest-coefficient</h2>
+      <h2>simplex method</h2>
       <p class="simtext" id="simtext"></p>
       <div id="simgrid" class="pair"></div>
     </section>
@@ -397,54 +400,53 @@ tr.pick td { color: var(--path); font-weight: 500; }
              flo: Math.min(...fAll), fhi: Math.max(...fAll) };
   }
 
-  // ---------- simplex (largest coefficient) ----------
+  // ---------- simplex (manual pivots) ----------
   const SUB = ["₁","₂","₃","₄","₅","₆","₇","₈"];
+  function makeTab(T, obj, basis, n, nv) {
+    const point = Array(n).fill(0);
+    basis.forEach((v, i) => { if (v < n) point[v] = T[i][nv]; });
+    const optimal = obj.slice(0, nv).every((v, j) => basis.includes(j) || v >= -1e-9);
+    return { T, obj, basis, point, f: obj[nv], optimal, enter: -1, leave: -1 };
+  }
   function runSimplex(c, A, b) {
     const m = A.length, n = c.length, nv = n + m;
     const names = ["x","y","z"].slice(0, n).concat(A.map((_, i) => "s" + SUB[i]));
-    if (b.some(v => v < -1e-12)) return { error: "The simplex walk here starts from the slack basis at the origin, which needs every right-hand side to be at least 0. Make all right-hand sides non-negative to see it." };
-    let T = A.map((r, i) => r.concat(A.map((_, k) => k === i ? 1 : 0), [b[i]]));
-    let obj = c.map(v => -v).concat(A.map(() => 0), [0]);
+    if (b.some(v => v < -1e-12)) return { error: "The simplex tableau here starts from the slack basis at the origin, which needs every right-hand side to be at least 0. Make all right-hand sides non-negative to pivot." };
+    const T = A.map((r, i) => r.concat(A.map((_, k) => k === i ? 1 : 0), [b[i]]));
+    const obj = c.map(v => -v).concat(A.map(() => 0), [0]);
     const basis = A.map((_, i) => n + i);
-    const steps = [];
-    const pointOf = () => { const p = Array(n).fill(0); basis.forEach((v, i) => { if (v < n) p[v] = T[i][nv]; }); return p; };
-    for (let it = 0; it < 60; it++) {
-      const cands = [];
-      for (let j = 0; j < nv; j++) {
-        if (basis.includes(j) || obj[j] >= -1e-9) continue;
-        const col = T.map(r => r[j]);
-        const norm = Math.sqrt(1 + col.reduce((s, v) => s + v*v, 0));
-        const d = Array(n).fill(0); if (j < n) d[j] = 1;
-        basis.forEach((bv, i) => { if (bv < n) d[bv] -= col[i]; });
-        let t = Infinity, row = -1;
-        col.forEach((a, i) => {
-          if (a <= 1e-9) return;
-          const r = T[i][nv] / a;
-          if (r < t - 1e-12 || (Math.abs(r - t) <= 1e-12 && basis[i] < basis[row])) { t = r; row = i; }
-        });
-        cands.push({ j, r: obj[j], norm, score: obj[j] / norm, d, t, row });
-      }
-      const snap = { T: T.map(r => r.slice()), obj: obj.slice(), basis: basis.slice(), point: pointOf(), f: obj[nv], cands };
-      if (!cands.length) { steps.push(Object.assign(snap, { kind: "optimal" })); break; }
-      let best = cands[0];
-      cands.forEach(k => { if (k.r < best.r - 1e-12) best = k; });
-      snap.best = best; snap.enter = best.j;
-      snap.ratios = T.map(r => r[best.j] > 1e-9 ? r[nv] / r[best.j] : null);
-      if (best.row < 0) { steps.push(Object.assign(snap, { kind: "unbounded" })); break; }
-      snap.leave = best.row;
-      steps.push(Object.assign(snap, { kind: "pivot" }));
-      const pr = best.row, pj = best.j, pv = T[pr][pj];
-      T[pr] = T[pr].map(v => v / pv);
-      T = T.map((r, i) => i === pr ? r : r.map((v, k) => v - r[pj] * T[pr][k]));
-      const f0 = obj[pj];
-      obj = obj.map((v, k) => v - f0 * T[pr][k]);
-      basis[pr] = pj;
+    return { names, n, nv, steps: [makeTab(T, obj, basis, n, nv)] };
+  }
+  // ratio test for column j of tableau s: row index, or -1 if the column has no positive entry
+  function ratioRow(s, j) {
+    const nv = sim.nv;
+    let t = Infinity, row = -1;
+    s.T.forEach((r, i) => {
+      const a = r[j];
+      if (a <= 1e-9) return;
+      const q = r[nv] / a;
+      if (q < t - 1e-12 || (Math.abs(q - t) <= 1e-12 && s.basis[i] < s.basis[row])) { t = q; row = i; }
+    });
+    return row;
+  }
+  // pivot tableau i on column j; drops any tableaus after i first
+  function pivotAt(i, j) {
+    const s = sim.steps[i], row = ratioRow(s, j);
+    if (row < 0 || s.basis.includes(j)) return;
+    sim.steps = sim.steps.slice(0, i + 1);
+    if (s.enter === j) {            // clicking the chosen pivot again unselects it
+      s.enter = -1; s.leave = -1;
+      renderSimplex(); draw();
+      return;
     }
-    const pages = [];
-    steps.forEach((s, i) => { if (s.kind === "pivot" && i + 1 < steps.length) pages.push([i, i + 1]); });
-    if (steps.length && steps[steps.length - 1].kind === "unbounded") pages.push([steps.length - 1, null]);
-    if (!pages.length) pages.push([0, null]);
-    return { steps, names, nv, pages };
+    s.enter = j; s.leave = row;
+    const nv = sim.nv, pv = s.T[row][j];
+    const pr = s.T[row].map(v => v / pv);
+    const T = s.T.map((r, k) => k === row ? pr : r.map((v, q) => v - r[j] * pr[q]));
+    const obj = s.obj.map((v, q) => v - s.obj[j] * pr[q]);
+    const basis = s.basis.slice(); basis[row] = j;
+    sim.steps.push(makeTab(T, obj, basis, sim.n, nv));
+    renderSimplex(); draw();
   }
 
   // ---------- editor ----------
@@ -592,7 +594,7 @@ tr.pick td { color: var(--path); font-weight: 500; }
 
     // simplex path
     const cur = null;
-    drawPath(P2, len2, Math.max(...M.E));
+    drawPath(P2);
 
     // corners
     const mid = M.real.length ? P2(M.real.reduce((s, p) => [s[0] + p[0]/M.real.length, s[1] + p[1]/M.real.length], [0, 0])) : O;
@@ -711,7 +713,7 @@ tr.pick td { color: var(--path); font-weight: 500; }
 
     // simplex path
     const cur = null;
-    drawPath(project, len, len(M.E));
+    drawPath(project);
 
     // points
     [].forEach(p => {
@@ -771,17 +773,24 @@ tr.pick td { color: var(--path); font-weight: 500; }
       return;
     }
     grid.hidden = false; txt.hidden = true;
-    const S = sim.steps;
-    const tag = s => s.kind === "optimal" ? " · optimal" : s.kind === "unbounded" ? " · unbounded" : "";
-    grid.innerHTML = S.map((s, i) =>
+    const keep = grid.scrollTop;
+    queueMicrotask(() => { grid.scrollTop = keep; });
+    grid.innerHTML = sim.steps.map((s, i) =>
       (i ? `<div class="arrow" aria-hidden="true">↓</div>` : "") +
-      `<div class="tb"><div class="label">tableau ${i + 1}${tag(s)}</div><div class="tablewrap"><table>${tableHTML(s, s.kind !== "optimal")}</table></div></div>`
+      `<div class="tb"><div class="tablewrap"><table>${tableHTML(s, i)}</table></div></div>`
     ).join("");
   }
-  function tableHTML(s, hl) {
+  function tableHTML(s, ti) {
     const nm = sim.names, nv = sim.nv;
-    const en = hl ? s.enter : -1, lvr = hl ? s.leave : -1;
-    let h = `<thead><tr><th>basis</th>${nm.map((n, j) => `<th class="${j === en ? "ent" : ""}">${n}</th>`).join("")}<th class="rhs">RHS</th></tr></thead><tbody>`;
+    const en = s.enter, lvr = s.leave;
+    const head = nm.map((n, j) => {
+      const can = !s.basis.includes(j) && ratioRow(s, j) >= 0;
+      const cls = [j === en ? "ent" : "", can ? "pick" : ""].join(" ").trim();
+      return can
+        ? `<th class="${cls}"><button class="pv" data-t="${ti}" data-j="${j}" aria-label="Pivot on ${n}">${n}</button></th>`
+        : `<th class="${cls}">${n}</th>`;
+    }).join("");
+    let h = `<thead><tr><th>basis</th>${head}<th class="rhs">RHS</th></tr></thead><tbody>`;
     s.T.forEach((r, i) => {
       h += `<tr class="${i === lvr ? "lv" : ""}"><td>${nm[s.basis[i]]}</td>` +
         r.slice(0, nv).map((v, j) => `<td class="${j === en ? (i === lvr ? "piv" : "ent") : ""}">${fnum(v)}</td>`).join("") +
@@ -790,16 +799,15 @@ tr.pick td { color: var(--path); font-weight: 500; }
     h += `<tr class="objrow"><td>f</td>${s.obj.slice(0, nv).map((v, j) => `<td class="${j === en ? "ent" : ""}">${fnum(v)}</td>`).join("")}<td class="rhs">${fnum(s.obj[nv])}</td></tr></tbody>`;
     return h;
   }
-  // full simplex path from the origin to the last tableau (plus the escape direction if unbounded)
-  function drawPath(proj, norm, scaleLen) {
+  document.getElementById("simgrid").addEventListener("click", e => {
+    const b = e.target.closest("button.pv"); if (!b) return;
+    pivotAt(+b.dataset.t, +b.dataset.j);
+  });
+  // arrows only for the pivots that have been chosen
+  function drawPath(proj) {
     if (!sim || !sim.steps) return;
     const S = sim.steps, pc = colors["--path"];
     for (let i = 1; i < S.length; i++) arrowLine(proj(S[i-1].point), proj(S[i].point), pc, 2.6);
-    const last = S[S.length - 1];
-    if (last.kind === "unbounded" && last.best) {
-      const dl = norm(last.best.d);
-      if (dl > 1e-12) arrowLine(proj(last.point), proj(last.best.d.map((v, i) => last.point[i] + 0.3 * scaleLen * v / dl)), pc, 2, [5, 4]);
-    }
   }
 
   function renderResult() {
