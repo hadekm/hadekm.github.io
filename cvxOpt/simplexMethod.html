@@ -1,0 +1,699 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>LP Polytope Explorer</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,600&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: title, then canvas left and the LP editor + level slider right; stacks on phones. */
+:root {
+  --bg: #f4f6f9;
+  --panel: #ffffff;
+  --ink: #17202e;
+  --muted: #5b6676;
+  --rule: #d8dee7;
+  --k1: #2f6fb0;
+  --k2: #23866a;
+  --k3: #7b4fb0;
+  --k4: #8a7a1c;
+  --level: #d27a1f;
+  --opt: #c2364a;
+  --face: #8592a5;
+  --path: #b8338f;
+  --font-display: "Literata", Georgia, "Times New Roman", serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f141b; --panel: #161d27; --ink: #e6ebf2; --muted: #98a3b3; --rule: #2a3442;
+    --k1: #6ea9e6; --k2: #5cc4a2; --k3: #b48ce8; --k4: #cdbb52;
+    --level: #f0a24e; --opt: #f26b7e; --face: #7d8899; --path: #e47cc6;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f141b; --panel: #161d27; --ink: #e6ebf2; --muted: #98a3b3; --rule: #2a3442;
+  --k1: #6ea9e6; --k2: #5cc4a2; --k3: #b48ce8; --k4: #cdbb52;
+  --level: #f0a24e; --opt: #f26b7e; --face: #7d8899; --path: #e47cc6;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5; }
+.wrap {
+  max-width: 1180px; margin: 0 auto;
+  padding-block: 24px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 20px;
+}
+h1 { font-family: var(--font-display); font-weight: 600; font-size: clamp(24px, 3.4vw, 32px); line-height: 1.15; margin: 0; }
+
+.bench { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(320px, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 880px) { .bench { grid-template-columns: minmax(0, 1fr); } }
+
+.stage { background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; aspect-ratio: 1 / 0.9; max-width: 100%; overflow: hidden; }
+canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+canvas:active { cursor: grabbing; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 13px; color: var(--muted); margin-top: 8px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+
+aside { display: grid; gap: 18px; min-width: 0; }
+.label { font-size: 12px; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+
+.editor { background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 14px; display: grid; gap: 10px; font-family: var(--font-mono); font-size: 14px; }
+.row { display: flex; align-items: center; gap: 5px; flex-wrap: nowrap; min-width: 0; }
+.row .tag { width: 2.2em; flex: none; font-weight: 500; }
+.row .kw { color: var(--muted); width: 2.2em; flex: none; font-size: 12px; }
+.row .v { color: var(--muted); }
+.row input {
+  width: 3.4em; min-width: 0; flex: 0 1 3.4em; padding: 4px 4px; text-align: center;
+  font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--rule); border-radius: 4px;
+}
+.row input[aria-invalid="true"] { border-color: var(--opt); color: var(--opt); }
+.row input:focus-visible, button:focus-visible, input[type="range"]:focus-visible { outline: 2px solid var(--level); outline-offset: 1px; }
+.rm { flex: none; margin-left: auto; width: 26px; height: 26px; border: 0; background: transparent; color: var(--muted); font-size: 17px; cursor: pointer; border-radius: 4px; }
+.rm:hover { color: var(--opt); }
+.rm[disabled] { visibility: hidden; }
+.sub { color: var(--muted); font-size: 12px; }
+.tools { display: flex; gap: 14px; flex-wrap: wrap; font-family: var(--font-body); }
+.linkbtn { border: 0; background: none; padding: 0; font: inherit; font-size: 14px; color: var(--k1); cursor: pointer; }
+.linkbtn[disabled] { color: var(--muted); cursor: default; }
+.err { font-family: var(--font-body); font-size: 13px; color: var(--opt); }
+
+.slider { display: grid; gap: 4px; }
+.readout { display: flex; justify-content: space-between; align-items: baseline; }
+.readout b { font-family: var(--font-mono); font-weight: 500; font-size: 18px; color: var(--level); font-variant-numeric: tabular-nums; }
+input[type="range"] { width: 100%; accent-color: var(--level); }
+.result { font-size: 15px; }
+.result b { color: var(--opt); font-weight: 500; }
+
+.simplex { display: grid; gap: 12px; border-top: 1px solid var(--rule); padding-top: 20px; }
+.simhead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 20px; }
+h2 { font-family: var(--font-display); font-weight: 600; font-size: 21px; margin: 0; }
+.rule { font-size: 13.5px; color: var(--muted); margin: 0; max-width: 75ch; }
+.ctrls { display: flex; align-items: center; gap: 8px; }
+.btn { font: inherit; font-size: 14px; font-weight: 500; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--rule); background: var(--panel); color: var(--ink); cursor: pointer; }
+.btn:disabled { color: var(--muted); cursor: default; opacity: .6; }
+.stepno { font-family: var(--font-mono); font-size: 13px; color: var(--muted); min-width: 7.5em; text-align: center; font-variant-numeric: tabular-nums; }
+.simtext { margin: 0; max-width: 80ch; }
+.simtext b { font-weight: 500; color: var(--path); }
+.simgrid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 880px) { .simgrid { grid-template-columns: minmax(0, 1fr); } }
+.tablewrap { overflow-x: auto; background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { padding: 6px 10px; border-bottom: 1px solid var(--rule); white-space: nowrap; text-align: right; }
+th { font-weight: 500; color: var(--muted); font-size: 12px; }
+td { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+th:first-child, td:first-child { text-align: left; }
+tbody tr:last-child td { border-bottom: 0; }
+tr.objrow td { border-top: 2px solid var(--rule); }
+td.rhs, th.rhs { border-left: 1px solid var(--rule); }
+.ent { background: color-mix(in srgb, var(--path) 9%, transparent); }
+tr.lv td { background: color-mix(in srgb, var(--path) 9%, transparent); }
+td.piv { background: color-mix(in srgb, var(--path) 28%, transparent); color: var(--ink); font-weight: 600; }
+tr.pick td { color: var(--path); font-weight: 500; }
+.simerr { color: var(--muted); }
+.pair { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; }
+.tb { display: grid; gap: 6px; min-width: 0; max-width: 100%; }
+.tb .tablewrap { width: fit-content; max-width: 100%; }
+.pair .arrow { font-size: 22px; color: var(--path); padding-top: 18px; }
+@media (max-width: 880px) { .pair .arrow { transform: rotate(90deg); padding-top: 0; } }
+</style>
+
+<div class="wrap">
+  <h1>Feasible region and basic solutions</h1>
+  <div class="bench">
+    <figure style="margin:0;min-width:0">
+      <div class="stage"><canvas id="cv" aria-label="Rotatable 3D view of the feasible region"></canvas></div>
+      <div class="legend">
+        <span><i class="dot" style="background:var(--ink)"></i>Corner of the feasible region</span>
+        <span><i class="dot" style="border:1.5px solid var(--muted)"></i>Plane meets an axis outside the region</span>
+        <span><i class="dot" style="background:var(--level)"></i>Level set f = c</span>
+        <span><i class="dot" style="background:var(--opt)"></i>Maximum</span>
+        <span><i class="dot" style="background:var(--path)"></i>Simplex path</span>
+      </div>
+    </figure>
+
+    <aside>
+      <div class="editor" id="editor" aria-label="Linear program editor"></div>
+      <div class="slider">
+        <div class="readout"><label for="c" class="label">Level value c</label><b id="cval">6.00</b></div>
+        <input type="range" id="c" min="0" max="22" step="0.05" value="6">
+      </div>
+      <div class="result" id="result"></div>
+    </aside>
+  </div>
+
+  <section class="simplex" aria-label="Simplex method">
+    <div class="simhead">
+      <h2>Simplex method, largest-coefficient rule</h2>
+      <div class="ctrls">
+        <button class="btn" id="prev" aria-label="Previous step">◀ Prev</button>
+        <span class="stepno" id="stepno">Step 1 of 1</span>
+        <button class="btn" id="next" aria-label="Next step">Next ▶</button>
+        <button class="btn" id="play">Play</button>
+      </div>
+    </div>
+    <p class="simtext" id="simtext"></p>
+    <div id="simgrid" class="pair">
+      <div class="tb"><div class="label" id="lab-from"></div><div class="tablewrap"><table id="tab"></table></div></div>
+      <div class="arrow" id="pair-arrow" aria-hidden="true">→</div>
+      <div class="tb" id="to-block"><div class="label" id="lab-to"></div><div class="tablewrap"><table id="tab2"></table></div></div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  const EXAMPLE = { c: ["3","2","4"], A: [["0","1","2"], ["1","0","2"]], b: ["4","2"] };
+  const MAXC = 4, KEY = "lp-explorer-v3";
+  let lp = JSON.parse(JSON.stringify(EXAMPLE));
+  try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.c && s.A && s.b) lp = s; } catch (e) {}
+
+  // ---------- math helpers ----------
+  const dot = (a, b) => a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
+  const len = a => Math.hypot(a[0], a[1], a[2]);
+  const sub = (a, b) => [a[0]-b[0], a[1]-b[1], a[2]-b[2]];
+  const cross = (a, b) => [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];
+  const close = (a, b) => len(sub(a, b)) < 1e-7 * (1 + len(a));
+  function parseNum(s) {
+    s = String(s).trim().replace(/−/g, "-");
+    if (!/^[-+]?(\d+\.?\d*|\.\d+)(\/(\d+\.?\d*|\.\d+))?$/.test(s)) return NaN;
+    const [p, q] = s.split("/");
+    const v = q === undefined ? +p : +p / +q;
+    return isFinite(v) ? v : NaN;
+  }
+  function frac(v) {
+    if (Math.abs(v) < 1e-9) return "0";
+    const sg = v < 0 ? "−" : ""; v = Math.abs(v);
+    for (let q = 1; q <= 200; q++) { const p = Math.round(v*q); if (p > 0 && Math.abs(v*q - p) < 1e-6*q) return sg + (q === 1 ? p : p + "/" + q); }
+    return sg + (+v.toFixed(3));
+  }
+  const fmtP = p => "(" + p.map(frac).join(", ") + ")";
+  function solve3(a, b, c) {
+    const det = dot(a.n, cross(b.n, c.n));
+    const sc = len(a.n) * len(b.n) * len(c.n);
+    if (Math.abs(det) < 1e-10 * sc) return null;
+    const r = [a.b, b.b, c.b];
+    const M = [a.n, b.n, c.n];
+    const col = (k) => M.map((row, i) => row.map((v, j) => j === k ? r[i] : v));
+    const d3 = m => dot(m[0], cross(m[1], m[2]));
+    return [d3(col(0)) / det, d3(col(1)) / det, d3(col(2)) / det];
+  }
+  function orderInPlane(pts, n) {
+    if (pts.length < 3) return pts;
+    const g = pts.reduce((s, p) => [s[0]+p[0]/pts.length, s[1]+p[1]/pts.length, s[2]+p[2]/pts.length], [0,0,0]);
+    const ax = Math.abs(n[0]) < Math.abs(n[1]) ? (Math.abs(n[0]) < Math.abs(n[2]) ? [1,0,0] : [0,0,1]) : (Math.abs(n[1]) < Math.abs(n[2]) ? [0,1,0] : [0,0,1]);
+    const u = cross(n, ax), w = cross(n, u);
+    return pts.slice().sort((p, q) => Math.atan2(dot(sub(p,g), w), dot(sub(p,g), u)) - Math.atan2(dot(sub(q,g), w), dot(sub(q,g), u)));
+  }
+  function planeBox(n, b, E) {
+    const pts = [];
+    const corner = m => [m & 1 ? E[0] : 0, m & 2 ? E[1] : 0, m & 4 ? E[2] : 0];
+    for (let m = 0; m < 8; m++) for (const bit of [1, 2, 4]) {
+      if (m & bit) continue;
+      const A = corner(m), B = corner(m | bit), fa = dot(n, A) - b, fb = dot(n, B) - b;
+      let p = null;
+      if (Math.abs(fa) < 1e-12) p = A;
+      else if (fa * fb < 0) { const t = fa / (fa - fb); p = [A[0]+t*(B[0]-A[0]), A[1]+t*(B[1]-A[1]), A[2]+t*(B[2]-A[2])]; }
+      if (p && !pts.some(q => close(q, p))) pts.push(p);
+    }
+    return orderInPlane(pts, n);
+  }
+
+  function enumerate(cons, clip) {
+    const planes = [];
+    cons.forEach(k => { if (len(k.n) > 1e-12) planes.push({ n: k.n, b: k.b, kind: k.kind }); });
+    for (let i = 0; i < 3; i++) { const n = [0,0,0]; n[i] = -1; planes.push({ n, b: 0, kind: "face" }); }
+    for (let i = 0; i < 3; i++) { const n = [0,0,0]; n[i] = 1; planes.push({ n, b: clip[i], kind: "clip" }); }
+    const tol = (pl, p) => 1e-7 * (1 + Math.abs(pl.b) + len(pl.n) * len(p));
+    const feas = p => cons.every(k => dot(k.n, p) <= k.b + tol(k, p)) && p.every((v, i) => v >= -1e-7 * (1 + clip[i]) && v <= clip[i] + 1e-7 * (1 + clip[i]));
+    const verts = [];
+    for (let i = 0; i < planes.length; i++) for (let j = i+1; j < planes.length; j++) for (let l = j+1; l < planes.length; l++) {
+      let p = solve3(planes[i], planes[j], planes[l]);
+      if (!p || !feas(p)) continue;
+      p = p.map(v => Math.abs(v) < 1e-10 ? 0 : v);
+      if (!verts.some(v => close(v.p, p))) verts.push({ p });
+    }
+    verts.forEach(v => {
+      v.act = planes.map((pl, k) => Math.abs(dot(pl.n, v.p) - pl.b) <= tol(pl, v.p) ? k : -1).filter(k => k >= 0);
+      v.clip = v.act.some(k => planes[k].kind === "clip");
+    });
+    return { planes, verts };
+  }
+
+  function build(lp) {
+    const c = lp.c.map(parseNum), A = lp.A.map(r => r.map(parseNum)), b = lp.b.map(parseNum);
+    if (c.some(isNaN) || A.some(r => r.some(isNaN)) || b.some(isNaN)) return null;
+    const cons = A.map((n, i) => ({ n, b: b[i], kind: "k" + (i+1) }));
+    const intercepts = [];
+    cons.forEach(k => { if (len(k.n) > 1e-12) for (let i = 0; i < 3; i++) if (Math.abs(k.n[i]) > 1e-12) {
+      const t = k.b / k.n[i]; if (t > 1e-9) { const p = [0,0,0]; p[i] = t; if (!intercepts.some(q => close(q, p))) intercepts.push(p); }
+    }});
+    const zeroBad = cons.some(k => len(k.n) <= 1e-12 && k.b < 0);
+    const big = zeroBad ? { verts: [] } : enumerate(cons, [1e4, 1e4, 1e4]);
+    const fv = p => dot(c, p);
+    let E = [0, 0, 0];
+    intercepts.forEach(p => p.forEach((v, i) => E[i] = Math.max(E[i], v)));
+    if (!big.verts.length) {
+      E = E.map(e => Math.max(e * 1.12, 1));
+      return { infeasible: true, c, cons, E, intercepts, verts: [], faces: [], edges: [], real: [], opt: [] };
+    }
+    const real = big.verts.filter(v => !v.clip).map(v => v.p);
+    const regionUnb = big.verts.some(v => v.clip);
+    const fReal = Math.max(...real.map(fv));
+    const fBig = Math.max(...big.verts.map(v => fv(v.p)));
+    const unbounded = fBig > fReal + 1e-6 * (1 + Math.abs(fReal));
+    real.forEach(p => p.forEach((v, i) => E[i] = Math.max(E[i], v)));
+    if (regionUnb) { const m = Math.max(...E, 1) * 1.5; E = [m, m, m]; }
+    else E = E.map(e => Math.max(e * 1.12, 1));
+
+    const d = enumerate(cons, E);
+    const faces = [];
+    d.planes.forEach((pl, k) => {
+      const pts = d.verts.filter(v => v.act.includes(k)).map(v => v.p);
+      if (pts.length >= 3) faces.push({ pts: orderInPlane(pts, pl.n), kind: pl.kind });
+    });
+    const edges = [];
+    for (let i = 0; i < d.verts.length; i++) for (let j = i+1; j < d.verts.length; j++) {
+      const com = d.verts[i].act.filter(k => d.verts[j].act.includes(k));
+      if (com.length >= 2) edges.push({ a: d.verts[i].p, b: d.verts[j].p, clip: com.some(k => d.planes[k].kind === "clip") });
+    }
+    const czero = len(c) < 1e-12;
+    const opt = (unbounded || czero) ? [] : real.filter(p => fv(p) >= fReal - 1e-7 * (1 + Math.abs(fReal)));
+    const hollow = intercepts.filter(p => !real.some(q => close(q, p)));
+    const fAll = d.verts.map(v => fv(v.p));
+    return { c, cons, E, real, opt, hollow, faces, edges, verts: d.verts, unbounded, czero, fmax: fReal,
+             flo: Math.min(...fAll), fhi: Math.max(...fAll) };
+  }
+
+  // ---------- simplex (steepest edge) ----------
+  const SUB = ["₁","₂","₃","₄"];
+  function runSimplex(c, A, b) {
+    const m = A.length, nv = 3 + m;
+    const names = ["x","y","z"].concat(A.map((_, i) => "s" + SUB[i]));
+    if (b.some(v => v < -1e-12)) return { error: "The simplex walk here starts from the slack basis at the origin, which needs every right-hand side to be at least 0. Make all right-hand sides non-negative to see it." };
+    let T = A.map((r, i) => r.concat(A.map((_, k) => k === i ? 1 : 0), [b[i]]));
+    let obj = c.map(v => -v).concat(A.map(() => 0), [0]);
+    const basis = A.map((_, i) => 3 + i);
+    const steps = [];
+    const pointOf = () => { const p = [0,0,0]; basis.forEach((v, i) => { if (v < 3) p[v] = T[i][nv]; }); return p; };
+    for (let it = 0; it < 60; it++) {
+      const cands = [];
+      for (let j = 0; j < nv; j++) {
+        if (basis.includes(j) || obj[j] >= -1e-9) continue;
+        const col = T.map(r => r[j]);
+        const norm = Math.sqrt(1 + col.reduce((s, v) => s + v*v, 0));
+        const d = [0,0,0]; if (j < 3) d[j] = 1;
+        basis.forEach((bv, i) => { if (bv < 3) d[bv] -= col[i]; });
+        let t = Infinity, row = -1;
+        col.forEach((a, i) => {
+          if (a <= 1e-9) return;
+          const r = T[i][nv] / a;
+          if (r < t - 1e-12 || (Math.abs(r - t) <= 1e-12 && basis[i] < basis[row])) { t = r; row = i; }
+        });
+        cands.push({ j, r: obj[j], norm, score: obj[j] / norm, d, t, row });
+      }
+      const snap = { T: T.map(r => r.slice()), obj: obj.slice(), basis: basis.slice(), point: pointOf(), f: obj[nv], cands };
+      if (!cands.length) { steps.push(Object.assign(snap, { kind: "optimal" })); break; }
+      let best = cands[0];
+      cands.forEach(k => { if (k.r < best.r - 1e-12) best = k; });
+      snap.best = best; snap.enter = best.j;
+      snap.ratios = T.map(r => r[best.j] > 1e-9 ? r[nv] / r[best.j] : null);
+      if (best.row < 0) { steps.push(Object.assign(snap, { kind: "unbounded" })); break; }
+      snap.leave = best.row;
+      steps.push(Object.assign(snap, { kind: "pivot" }));
+      const pr = best.row, pj = best.j, pv = T[pr][pj];
+      T[pr] = T[pr].map(v => v / pv);
+      T = T.map((r, i) => i === pr ? r : r.map((v, k) => v - r[pj] * T[pr][k]));
+      const f0 = obj[pj];
+      obj = obj.map((v, k) => v - f0 * T[pr][k]);
+      basis[pr] = pj;
+    }
+    const pages = [];
+    steps.forEach((s, i) => { if (s.kind === "pivot" && i + 1 < steps.length) pages.push([i, i + 1]); });
+    if (steps.length && steps[steps.length - 1].kind === "unbounded") pages.push([steps.length - 1, null]);
+    if (!pages.length) pages.push([0, null]);
+    return { steps, names, nv, pages };
+  }
+
+  // ---------- editor ----------
+  const editor = document.getElementById("editor");
+  function cell(id, val, aria) { return `<input id="${id}" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" value="${val}" aria-label="${aria}">`; }
+  function renderEditor() {
+    const vars = ["x", "y", "z"];
+    const term = (id, val, j, aria) => `${j ? '<span class="v">+</span>' : ""}${cell(id, val, aria)}<span>${vars[j]}</span>`;
+    let h = `<div class="row"><span class="kw">max</span>${lp.c.map((v, j) => term(`c-${j}`, v, j, `Objective coefficient of ${vars[j]}`)).join("")}</div>`;
+    h += `<div class="sub">subject to</div>`;
+    lp.A.forEach((row, i) => {
+      h += `<div class="row"><span class="tag" style="color:var(--k${i+1})">(${i+1})</span>` +
+           row.map((v, j) => term(`a-${i}-${j}`, v, j, `Constraint ${i+1}, coefficient of ${vars[j]}`)).join("") +
+           `<span class="v">≤</span>${cell(`b-${i}`, lp.b[i], `Constraint ${i+1}, right-hand side`)}` +
+           `<button class="rm" data-rm="${i}" aria-label="Remove constraint ${i+1}" ${lp.A.length <= 1 ? "disabled" : ""}>×</button></div>`;
+    });
+    h += `<div class="sub">x, y, z ≥ 0</div>`;
+    h += `<div class="err" id="err" hidden>Use numbers like 3, -1.5 or 2/3 in the highlighted boxes.</div>`;
+    h += `<div class="tools"><button class="linkbtn" id="add" ${lp.A.length >= MAXC ? "disabled" : ""}>+ Add constraint</button><button class="linkbtn" id="restore">Restore example</button></div>`;
+    editor.innerHTML = h;
+    markInvalid();
+  }
+  function markInvalid() {
+    let bad = false;
+    editor.querySelectorAll("input").forEach(el => { const ok = !isNaN(parseNum(el.value)); el.setAttribute("aria-invalid", String(!ok)); if (!ok) bad = true; });
+    const e = document.getElementById("err"); if (e) e.hidden = !bad;
+  }
+  editor.addEventListener("input", e => {
+    const id = e.target.id; if (!id) return;
+    const [t, i, j] = id.split("-");
+    if (t === "c") lp.c[+i] = e.target.value;
+    else if (t === "a") lp.A[+i][+j] = e.target.value;
+    else if (t === "b") lp.b[+i] = e.target.value;
+    markInvalid(); update();
+  });
+  editor.addEventListener("click", e => {
+    const t = e.target;
+    if (t.dataset && t.dataset.rm !== undefined) { const i = +t.dataset.rm; lp.A.splice(i, 1); lp.b.splice(i, 1); renderEditor(); update(true); }
+    else if (t.id === "add" && lp.A.length < MAXC) { lp.A.push(["1","1","1"]); lp.b.push("5"); renderEditor(); update(true); }
+    else if (t.id === "restore") { lp = JSON.parse(JSON.stringify(EXAMPLE)); renderEditor(); update(true); }
+  });
+
+  // ---------- view ----------
+  const st = { yaw: -2.3, pitch: 0.42, c: 6, zoom: 1, step: 0 };
+  let M = null, sim = null, timer = 0;
+  const cv = document.getElementById("cv"), ctx = cv.getContext("2d");
+  let W = 0, H = 0, scale = 1, center = [0,0,0], colors = {}, mono = "monospace";
+  const slider = document.getElementById("c");
+
+  function readColors() {
+    const cs = getComputedStyle(document.documentElement);
+    ["--ink","--muted","--rule","--k1","--k2","--k3","--k4","--level","--opt","--face","--panel","--path"].forEach(k => colors[k] = cs.getPropertyValue(k).trim());
+    mono = cs.getPropertyValue("--font-mono");
+  }
+  function rgba(hex, a) {
+    let h = hex.replace("#", "");
+    if (h.length === 3) h = h.split("").map(c => c + c).join("");
+    const n = parseInt(h, 16);
+    return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;
+  }
+  function fit() {
+    if (!M) return;
+    center = M.E.map(e => e * 0.42);
+    scale = Math.min(W, H) / 2 / (0.46 * len(M.E));
+  }
+  function project(p) {
+    const x = p[0]-center[0], y = p[1]-center[1], z = p[2]-center[2];
+    const cy = Math.cos(st.yaw), sy = Math.sin(st.yaw);
+    const u = x*cy - y*sy, v = x*sy + y*cy;
+    const cp = Math.cos(st.pitch), sp = Math.sin(st.pitch);
+    const s = scale * st.zoom;
+    return { x: W/2 + u*s, y: H/2 - (v*sp + z*cp)*s, d: v*cp - z*sp };
+  }
+  function resize() {
+    const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+    W = r.width; H = r.height;
+    cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    fit(); draw();
+  }
+  function poly(pr, fill, stroke, lw, dash) {
+    ctx.beginPath();
+    pr.forEach((q, i) => i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y));
+    ctx.closePath();
+    if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+    if (stroke) { ctx.setLineDash(dash || []); ctx.strokeStyle = stroke; ctx.lineWidth = lw || 1; ctx.stroke(); ctx.setLineDash([]); }
+  }
+  function line(a, b, color, lw, dash) {
+    ctx.setLineDash(dash || []); ctx.strokeStyle = color; ctx.lineWidth = lw;
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); ctx.setLineDash([]);
+  }
+  function label(text, x, y, color, weight) {
+    ctx.font = (weight || 400) + " 11.5px " + mono;
+    ctx.lineWidth = 3; ctx.strokeStyle = colors["--panel"]; ctx.lineJoin = "round";
+    ctx.strokeText(text, x, y); ctx.fillStyle = color; ctx.fillText(text, x, y);
+  }
+  function section(c) {
+    const pts = [];
+    M.edges.forEach(({ a: P, b: Q }) => {
+      const fp = dot(M.c, P), fq = dot(M.c, Q);
+      const add = q => { if (!pts.some(r => close(r, q))) pts.push(q); };
+      if (Math.abs(fp - c) < 1e-9) add(P);
+      if (Math.abs(fq - c) < 1e-9) add(Q);
+      if ((fp - c) * (fq - c) < 0) { const t = (c - fp) / (fq - fp); add([P[0]+t*(Q[0]-P[0]), P[1]+t*(Q[1]-P[1]), P[2]+t*(Q[2]-P[2])]); }
+    });
+    return orderInPlane(pts, M.c);
+  }
+
+  function draw() {
+    if (!W || !M) return;
+    ctx.clearRect(0, 0, W, H);
+    const E = M.E, o = project([0,0,0]);
+    [[[E[0],0,0],"x"],[[0,E[1],0],"y"],[[0,0,E[2]],"z"]].forEach(([e, n]) => {
+      const t = project(e);
+      line(o, t, rgba(colors["--muted"], 0.6), 1, [4, 4]);
+      ctx.fillStyle = colors["--muted"]; ctx.font = "italic 500 14px " + mono;
+      ctx.fillText(n, t.x + 5, t.y + 4);
+    });
+    M.cons.forEach(k => {
+      if (len(k.n) < 1e-12) return;
+      const pr = planeBox(k.n, k.b, E);
+      if (pr.length >= 3) poly(pr.map(project), null, rgba(colors["--" + k.kind], 0.55), 1, [5, 4]);
+    });
+
+    const c = st.c, active = !M.infeasible && !M.czero;
+    if (active) {
+      const tri = planeBox(M.c, c, E);
+      if (tri.length >= 3) poly(tri.map(project), null, rgba(colors["--level"], 0.5), 1);
+    }
+    const items = M.faces.map(fc => {
+      const pr = fc.pts.map(project);
+      return { kind: fc.kind, pr, d: pr.reduce((s, q) => s + q.d, 0) / pr.length };
+    });
+    let sec = [];
+    if (active) {
+      sec = section(c);
+      if (sec.length >= 3) { const pr = sec.map(project); items.push({ kind: "sec", pr, d: pr.reduce((s, q) => s + q.d, 0) / pr.length - 0.05 }); }
+    }
+    items.sort((a, b) => b.d - a.d).forEach(it => {
+      if (it.kind === "sec") poly(it.pr, rgba(colors["--level"], 0.55), colors["--level"], 2);
+      else if (it.kind === "clip") poly(it.pr, rgba(colors["--face"], 0.05), null);
+      else {
+        const col = it.kind === "face" ? colors["--face"] : colors["--" + it.kind];
+        poly(it.pr, rgba(col, it.kind === "face" ? 0.12 : 0.26), null);
+      }
+    });
+    if (sec.length === 2) line(project(sec[0]), project(sec[1]), colors["--level"], 2.5);
+    M.edges.forEach(e => line(project(e.a), project(e.b), rgba(colors["--ink"], e.clip ? 0.3 : 0.75), e.clip ? 1 : 1.2, e.clip ? [3, 3] : null));
+
+    // gradient arrow
+    if (active && M.verts.length) {
+      const g = M.verts.reduce((s, v) => [s[0]+v.p[0], s[1]+v.p[1], s[2]+v.p[2]], [0,0,0]).map(v => v / M.verts.length);
+      const L = 0.12 * len(E), cn = len(M.c);
+      const A = project(g), B = project([g[0] + L*M.c[0]/cn, g[1] + L*M.c[1]/cn, g[2] + L*M.c[2]/cn]);
+      line(A, B, colors["--ink"], 1.6);
+      const ang = Math.atan2(B.y - A.y, B.x - A.x);
+      ctx.fillStyle = colors["--ink"];
+      ctx.beginPath(); ctx.moveTo(B.x, B.y);
+      ctx.lineTo(B.x - 9*Math.cos(ang - 0.4), B.y - 9*Math.sin(ang - 0.4));
+      ctx.lineTo(B.x - 9*Math.cos(ang + 0.4), B.y - 9*Math.sin(ang + 0.4));
+      ctx.closePath(); ctx.fill();
+      ctx.font = "500 13px " + mono; ctx.fillText("∇f", B.x + 6, B.y - 6);
+    }
+
+    // simplex path and the improving edges at the current step
+    let cur = null;
+    if (sim && sim.steps) {
+      const S = sim.steps, k = sim.pages[Math.min(st.step, sim.pages.length - 1)][0], pc = colors["--path"];
+      for (let i = 1; i <= k; i++) arrowLine(project(S[i-1].point), project(S[i].point), pc, 2.6);
+      cur = S[k];
+      cur.cands.forEach(cd => {
+        const pick = cur.best && cd.j === cur.best.j;
+        let end;
+        if (isFinite(cd.t) && cd.t > 1e-12) end = cd.d.map((v, i) => cur.point[i] + cd.t * v);
+        else {
+          const dl = len(cd.d); if (dl < 1e-12) return;
+          const L = (isFinite(cd.t) ? 0.08 : 0.3) * len(M.E);
+          end = cd.d.map((v, i) => cur.point[i] + L * v / dl);
+        }
+        arrowLine(project(cur.point), project(end), rgba(pc, pick ? 0.95 : 0.45), pick ? 2 : 1.2, [5, 4]);
+      });
+    }
+
+    // points
+    M.hollow.forEach(p => {
+      const P = project(p);
+      ctx.fillStyle = colors["--panel"]; ctx.strokeStyle = colors["--muted"]; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(P.x, P.y, 4, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+    });
+    const mid = M.real.length ? project(M.real.reduce((s, p) => [s[0]+p[0], s[1]+p[1], s[2]+p[2]], [0,0,0]).map(v => v / M.real.length)) : o;
+    M.real.forEach(p => {
+      const P = project(p), isOpt = M.opt.some(q => close(q, p));
+      ctx.fillStyle = isOpt ? colors["--opt"] : colors["--ink"];
+      ctx.beginPath(); ctx.arc(P.x, P.y, isOpt ? 5.5 : 3.5, 0, Math.PI*2); ctx.fill();
+      if (!isOpt) return;
+      ctx.strokeStyle = colors["--opt"]; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(P.x, P.y, 10, 0, Math.PI*2); ctx.stroke();
+      const txt = fmtP(p);
+      ctx.font = "500 11.5px " + mono;
+      const w = ctx.measureText(txt).width;
+      let dx = P.x - mid.x, dy = P.y - mid.y; const L = Math.hypot(dx, dy) || 1; dx /= L; dy /= L;
+      let lx = P.x + dx*14 + (dx < -0.3 ? -w : dx > 0.3 ? 0 : -w/2), ly = P.y + dy*14 + 4;
+      lx = Math.max(4, Math.min(W - w - 4, lx)); ly = Math.max(12, Math.min(H - 4, ly));
+      label(txt, lx, ly, colors["--opt"], 500);
+    });
+    if (cur) {
+      const P = project(cur.point);
+      ctx.strokeStyle = colors["--path"]; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(P.x, P.y, 14, 0, Math.PI*2); ctx.stroke();
+    }
+  }
+  function arrowLine(A, B, color, lw, dash) {
+    if (Math.hypot(B.x - A.x, B.y - A.y) < 3) return;
+    line(A, B, color, lw, dash);
+    const ang = Math.atan2(B.y - A.y, B.x - A.x), s = 6 + lw * 1.5;
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.moveTo(B.x, B.y);
+    ctx.lineTo(B.x - s*Math.cos(ang - 0.4), B.y - s*Math.sin(ang - 0.4));
+    ctx.lineTo(B.x - s*Math.cos(ang + 0.4), B.y - s*Math.sin(ang + 0.4));
+    ctx.closePath(); ctx.fill();
+  }
+
+  // ---------- simplex panel ----------
+  const fnum = v => { const s = frac(v); return s.length > 9 ? (+v.toFixed(3)).toString().replace("-", "−") : s; };
+  function renderSimplex() {
+    const txt = document.getElementById("simtext"), grid = document.getElementById("simgrid");
+    const prev = document.getElementById("prev"), next = document.getElementById("next"), play = document.getElementById("play");
+    const stepno = document.getElementById("stepno");
+    if (!sim || sim.error) {
+      txt.innerHTML = `<span class="simerr">${sim ? sim.error : ""}</span>`;
+      txt.hidden = false; grid.hidden = true; prev.disabled = next.disabled = play.disabled = true; stepno.textContent = "–";
+      return;
+    }
+    grid.hidden = false; txt.hidden = true;
+    const S = sim.steps, P = sim.pages, k = st.step, [fi, ti] = P[k], s = S[fi], nm = sim.names, nv = sim.nv;
+    stepno.textContent = ti === null && S[fi].kind === "optimal" ? "Already optimal" : `Pivot ${k + 1} of ${P.length}`;
+    prev.disabled = k === 0; next.disabled = k === P.length - 1; play.disabled = P.length < 2;
+    const tag = st => st.kind === "optimal" ? " · optimal" : st.kind === "unbounded" ? " · unbounded" : "";
+    document.getElementById("lab-from").textContent = `Tableau ${fi + 1}${tag(s)}`;
+    document.getElementById("to-block").hidden = ti === null;
+    document.getElementById("pair-arrow").hidden = ti === null;
+    if (ti !== null) {
+      document.getElementById("lab-to").textContent = `Tableau ${ti + 1}${tag(S[ti])}`;
+      document.getElementById("tab2").innerHTML = tableHTML(S[ti], false);
+    }
+    play.textContent = timer ? "Pause" : "Play";
+
+    if (s.kind === "optimal") {
+      txt.innerHTML = `No entry in the f row is negative, so this tableau is <b>optimal</b>: f = ${fnum(s.f)} at ${fmtP(s.point)}.`;
+    } else if (s.kind === "unbounded") {
+      txt.innerHTML = `<b>${nm[s.enter]}</b> enters, but its column has no positive entry, so the ratio test never stops it. f grows without limit along this edge.`;
+    } else {
+      const lv = nm[s.basis[s.leave]];
+      const ratios = s.T.map((r, i) => s.ratios[i] === null ? null : `${nm[s.basis[i]]}: ${fnum(r[nv])}/${fnum(r[s.enter])} = ${fnum(s.ratios[i])}`).filter(Boolean).join(", ");
+      const degen = s.best.t < 1e-12 ? " This pivot is degenerate, so the point does not move." : "";
+      txt.innerHTML = `At ${fmtP(s.point)} with f = ${fnum(s.f)}: <b>${nm[s.enter]}</b> enters because its f-row entry ${fnum(s.best.r)} is the most negative. Ratio test (${ratios}) gives the minimum at <b>${lv}</b>, so ${lv} leaves. Pivot on ${fnum(s.T[s.leave][s.enter])}.${degen}`;
+    }
+
+    document.getElementById("tab").innerHTML = tableHTML(s, true);
+  }
+  function tableHTML(s, hl) {
+    const nm = sim.names, nv = sim.nv;
+    const en = hl ? s.enter : -1, lvr = hl ? s.leave : -1;
+    let h = `<thead><tr><th>Basis</th>${nm.map((n, j) => `<th class="${j === en ? "ent" : ""}">${n}</th>`).join("")}<th class="rhs">RHS</th></tr></thead><tbody>`;
+    s.T.forEach((r, i) => {
+      h += `<tr class="${i === lvr ? "lv" : ""}"><td>${nm[s.basis[i]]}</td>` +
+        r.slice(0, nv).map((v, j) => `<td class="${j === en ? (i === lvr ? "piv" : "ent") : ""}">${fnum(v)}</td>`).join("") +
+        `<td class="rhs">${fnum(r[nv])}</td></tr>`;
+    });
+    h += `<tr class="objrow"><td>f</td>${s.obj.slice(0, nv).map((v, j) => `<td class="${j === en ? "ent" : ""}">${fnum(v)}</td>`).join("")}<td class="rhs">${fnum(s.obj[nv])}</td></tr></tbody>`;
+    return h;
+  }
+  function goStep(k) {
+    if (!sim || !sim.steps) return;
+    st.step = Math.max(0, Math.min(sim.pages.length - 1, k));
+    renderSimplex(); draw();
+  }
+  function stopPlay() { if (timer) { clearInterval(timer); timer = 0; } }
+  document.getElementById("prev").addEventListener("click", () => { stopPlay(); goStep(st.step - 1); });
+  document.getElementById("next").addEventListener("click", () => { stopPlay(); goStep(st.step + 1); });
+  document.getElementById("play").addEventListener("click", () => {
+    if (timer) { stopPlay(); renderSimplex(); return; }
+    if (st.step >= sim.pages.length - 1) goStep(0);
+    timer = setInterval(() => {
+      if (st.step >= sim.pages.length - 1) { stopPlay(); renderSimplex(); return; }
+      goStep(st.step + 1);
+    }, 1400);
+    renderSimplex();
+  });
+
+  function renderResult() {
+    const r = document.getElementById("result");
+    if (!M) return;
+    if (M.infeasible) r.textContent = "No point satisfies all the constraints, so there is nothing to maximize.";
+    else if (M.unbounded) r.textContent = "f has no maximum: the region keeps going in a direction where f grows without limit.";
+    else if (M.czero) r.textContent = "All objective coefficients are 0, so f = 0 everywhere.";
+    else if (M.opt.length === 1) r.innerHTML = `Maximum <b>f = ${frac(M.fmax)}</b> at ${fmtP(M.opt[0])}`;
+    else r.innerHTML = `Maximum <b>f = ${frac(M.fmax)}</b>, reached at ${M.opt.length} corners (${M.opt.map(fmtP).join(", ")}) and every point between them`;
+  }
+  function setSlider(reset) {
+    const off = !M || M.infeasible || M.czero || M.fhi - M.flo < 1e-9;
+    slider.disabled = off;
+    if (off) { document.getElementById("cval").textContent = "–"; return; }
+    const lo = M.flo, hi = M.fhi + 0.1 * (M.fhi - M.flo);
+    slider.min = lo; slider.max = hi; slider.step = (hi - lo) / 600;
+    if (reset || st.c < lo || st.c > hi) st.c = lo + 0.3 * (M.fhi - lo);
+    slider.value = st.c;
+    document.getElementById("cval").textContent = st.c.toFixed(2);
+  }
+  function update(reset) {
+    const m = build(lp);
+    if (!m) return;
+    M = m;
+    try { localStorage.setItem(KEY, JSON.stringify(lp)); } catch (e) {}
+    stopPlay();
+    sim = runSimplex(M.c, M.cons.map(k => k.n), M.cons.map(k => k.b));
+    st.step = 0;
+    fit(); setSlider(reset); renderResult(); renderSimplex(); draw();
+  }
+
+  slider.addEventListener("input", () => { st.c = +slider.value; document.getElementById("cval").textContent = st.c.toFixed(2); draw(); });
+
+  // drag to rotate, wheel / pinch to zoom
+  const ptrs = new Map();
+  let drag = null, pinch = null;
+  cv.addEventListener("pointerdown", e => {
+    cv.setPointerCapture(e.pointerId);
+    ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (ptrs.size === 1) drag = { x: e.clientX, y: e.clientY, yaw: st.yaw, pitch: st.pitch };
+    if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), zoom: st.zoom }; drag = null; }
+  });
+  cv.addEventListener("pointermove", e => {
+    if (!ptrs.has(e.pointerId)) return;
+    ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pinch && ptrs.size === 2) {
+      const [a, b] = [...ptrs.values()];
+      st.zoom = Math.max(0.35, Math.min(4, pinch.zoom * Math.hypot(a.x - b.x, a.y - b.y) / pinch.d));
+    } else if (drag) {
+      st.yaw = drag.yaw + (e.clientX - drag.x) * 0.01;
+      st.pitch = Math.max(-0.2, Math.min(1.45, drag.pitch + (e.clientY - drag.y) * 0.008));
+    }
+    draw();
+  });
+  const end = e => { ptrs.delete(e.pointerId); pinch = null; drag = null; };
+  cv.addEventListener("pointerup", end); cv.addEventListener("pointercancel", end);
+  cv.addEventListener("wheel", e => { e.preventDefault(); st.zoom = Math.max(0.35, Math.min(4, st.zoom * Math.exp(-e.deltaY * 0.0015))); draw(); }, { passive: false });
+
+  const refresh = () => { readColors(); draw(); };
+  try { window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", refresh); } catch (e) {}
+  new MutationObserver(refresh).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(refresh);
+
+  readColors();
+  renderEditor();
+  update(true);
+  st.c = Math.min(Math.max(6, +slider.min), +slider.max); slider.value = st.c;
+  document.getElementById("cval").textContent = st.c.toFixed(2);
+  new ResizeObserver(resize).observe(cv);
+})();
+</script>
+
+</body></html>
