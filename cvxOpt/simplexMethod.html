@@ -429,13 +429,26 @@ tr.pick td { color: var(--path); font-weight: 500; }
     });
     return row;
   }
+  // move the level slider to f = v (the corner the simplex has reached)
+  function setLevel(v) {
+    if (slider.disabled) return;
+    st.c = Math.max(+slider.min, Math.min(+slider.max, v));
+    slider.value = st.c;
+    document.getElementById("cval").textContent = st.c.toFixed(2);
+  }
+  // a column may enter only if it is nonbasic, its f-row entry is not positive
+  // (so f increases or stays the same) and the ratio test has a row to stop at
+  function canPivot(s, j) {
+    return !s.basis.includes(j) && s.obj[j] <= 1e-9 && ratioRow(s, j) >= 0;
+  }
   // pivot tableau i on column j; drops any tableaus after i first
   function pivotAt(i, j) {
     const s = sim.steps[i], row = ratioRow(s, j);
-    if (row < 0 || s.basis.includes(j)) return;
+    if (!canPivot(s, j)) return;
     sim.steps = sim.steps.slice(0, i + 1);
     if (s.enter === j) {            // clicking the chosen pivot again unselects it
       s.enter = -1; s.leave = -1;
+      setLevel(s.f);
       renderSimplex(); draw();
       return;
     }
@@ -445,7 +458,9 @@ tr.pick td { color: var(--path); font-weight: 500; }
     const T = s.T.map((r, k) => k === row ? pr : r.map((v, q) => v - r[j] * pr[q]));
     const obj = s.obj.map((v, q) => v - s.obj[j] * pr[q]);
     const basis = s.basis.slice(); basis[row] = j;
-    sim.steps.push(makeTab(T, obj, basis, sim.n, nv));
+    const next = makeTab(T, obj, basis, sim.n, nv);
+    sim.steps.push(next);
+    setLevel(next.f);
     renderSimplex(); draw();
   }
 
@@ -784,7 +799,7 @@ tr.pick td { color: var(--path); font-weight: 500; }
     const nm = sim.names, nv = sim.nv;
     const en = s.enter, lvr = s.leave;
     const head = nm.map((n, j) => {
-      const can = !s.basis.includes(j) && ratioRow(s, j) >= 0;
+      const can = canPivot(s, j);
       const cls = [j === en ? "ent" : "", can ? "pick" : ""].join(" ").trim();
       return can
         ? `<th class="${cls}"><button class="pv" data-t="${ti}" data-j="${j}" aria-label="Pivot on ${n}">${n}</button></th>`
